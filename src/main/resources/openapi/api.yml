@@ -1,0 +1,243 @@
+openapi: 3.0.3
+info:
+  title: Users API
+  description: API for managing Users
+  contact:
+    email: afrifa@example.com
+  version: 1.0.0
+externalDocs:
+  description: Find out more about Users API
+  url: http://example.com
+servers:
+  - url: http://localhost:8080
+    description: Local server
+tags:
+  - name: users
+    description: Operations about users
+
+paths:
+  /users:
+    get:
+      tags:
+        - users
+      summary: List all users
+      description: Returns a list of all users
+      operationId: getUsers
+      parameters:
+        - name: pageNo
+          in: query
+          description: Page number (defaults to 0)
+          required: false
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+        - name: pageSize
+          in: query
+          description: Number of users per page (defaults to 10)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: orderBy
+          in: query
+          description: Sort users by (defaults to id)
+          required: false
+          schema:
+            type: string
+            enum: [id, firstName, lastName, email, phoneNumber]
+            default: id
+        - name: direction
+          in: query
+          description: Sort direction (defaults to asc)
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UsersDto'
+        '400':
+          description: Bad request (e.g., invalid parameter values)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+        '500':
+           description: Internal server error
+           content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+    post:
+      tags:
+        - users
+      summary: Create a new user
+      operationId: createUser
+      description: Creates a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequestDto'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDto'
+  /users/{id}:
+    get:
+      tags:
+        - users
+      summary: Get a user by ID
+      operationId: getUser
+      description: Returns a single user
+      parameters:
+        - name: id
+          in: path
+          description: ID of user to return
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDto'
+    put:
+      tags:
+        - users
+      summary: Update a user
+      operationId: updateUser
+      description: Updates an existing user
+      parameters:
+        - name: id
+          in: path
+          description: ID of user to update
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserDto'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDto'
+    delete:
+      tags:
+        - users
+      summary: Delete a user
+      operationId: deleteUser
+      description: Deletes an existing user
+      parameters:
+        - name: id
+          in: path
+          description: ID of user to delete
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User deleted successfully
+
+
+components:
+  schemas:
+    UserDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        phoneNumber:
+          type: string
+          nullable: true
+          description: phone number of the user
+    UserRequestDto:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - email
+        - phoneNumber
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        # Ensure valid email format with stricter rules than basic format: email. Pattern is handled in code
+        email:
+          type: string
+          format: email
+          description: Email address of the user
+          example: user@example.com
+          minLength: 10
+          maxLength: 50
+        phoneNumber:
+          type: string
+          nullable: true
+          description: phone number of the user
+          example: "000000000000"
+          minLength: 10
+          maxLength: 13
+          pattern: ^\d{10,13}$
+    UsersDto:
+      description: A paginated list of users
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserDto'
+        totalElements:
+          type: integer
+          format: int64
+          description: Total number of users
+          example: 100
+        totalPages:
+          type: integer
+          format: int32
+          description: Total number of pages
+          example: 10
+    APIError:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Error message
+          example: Invalid parameter value
+        path:
+          type: string
+          description: Path of the request that caused the error
+          example: /api/v1/bookings
+        timeStamp:
+          type: string
+          format: date-time
+          description: Timestamp of the error
+          example: '2023-05-25T12:34:56.000Z'
