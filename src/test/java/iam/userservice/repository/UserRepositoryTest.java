@@ -1,12 +1,9 @@
 package iam.userservice.repository;
 
 import iam.userservice.PostgresConfiguration;
-import iam.userservice.entity.Role;
 import iam.userservice.entity.User;
-import iam.userservice.enums.RoleEnum;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -14,11 +11,9 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.util.HashSet;
 import java.util.Optional;
-import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
@@ -28,27 +23,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @ActiveProfiles("test")
 class UserRepositoryTest {
 
+    public static final String PHONE_NUMBER = "1234567890";
+    public static final String LAST_NAME = "Doe";
+    public static final String FIRST_NAME = "John";
+    public static final String EMAIL = "test@example.com";
     @Autowired
     private UserRepository underTest;
-    @Autowired
-    private RoleRepository roleRepository;
-
-    @BeforeEach
-    void setUp() {
-        createDefaultRoles();
-    }
 
     @AfterEach
     void tearDown() {
         underTest.deleteAll();
-    }
-
-    @Test
-    void findByUsername_shouldReturnEmptyOptionalWhenNotFound() {
-        // When
-        Optional<User> foundUser = underTest.findByUsername("nonexistentUser");
-        // Then
-        assertTrue(foundUser.isEmpty());
     }
 
     @Test
@@ -60,45 +44,28 @@ class UserRepositoryTest {
     }
 
     @Test
-    void findByUsername_shouldReturnUserWhenFound() {
-        // Given
-        var user = getUser();
-        underTest.save(user);
-        // When
-        Optional<User> foundUser = underTest.findByUsername("testUser");
-        // Then
-        assertTrue(foundUser.isPresent());
-        assertFalse(foundUser.get().getRoles().isEmpty());
-    }
-
-    @Test
     void findByEmail_shouldReturnUserWhenFound() {
         // Given
         var user = getUser();
         underTest.save(user);
         // When
-        Optional<User> foundUser = underTest.findByEmail("test@example.com");
+        Optional<User> foundUser = underTest.findByEmail(EMAIL);
         // Then
         assertTrue(foundUser.isPresent());
+        var actualUser = foundUser.get();
+        assertEquals(PHONE_NUMBER, actualUser.getPhoneNumber());
+        assertEquals(FIRST_NAME, actualUser.getFirstName());
+        assertEquals(LAST_NAME, actualUser.getLastName());
+        assertEquals(EMAIL, actualUser.getEmail());
     }
 
     private @NotNull User getUser() {
         User user = new User();
-        user.setUsername("testUser");
-        user.setEmail("test@example.com");
-        user.setPassword("password");
-        Optional<Role> optionalRole = roleRepository.findByName(RoleEnum.USER);
-        assertTrue(optionalRole.isPresent());
-        var userRole = optionalRole.get();
-        Set<Role> userRoles = new HashSet<>();
-        userRoles.add(userRole);
-        user.setRoles(userRoles);
+        user.setFirstName(FIRST_NAME);
+        user.setLastName(LAST_NAME);
+        user.setEmail(EMAIL);
+        user.setPhoneNumber(PHONE_NUMBER);
         return user;
     }
 
-    private void createDefaultRoles() {
-        Role userRole = new Role();
-        userRole.setName(RoleEnum.USER);
-        roleRepository.save(userRole);
-    }
 }
