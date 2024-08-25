@@ -4,6 +4,7 @@ import iam.userservice.PostgresConfiguration;
 import iam.userservice.entity.User;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -11,6 +12,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -21,14 +24,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Import(PostgresConfiguration.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
+@DisplayName("Running userRepository tests")
 class UserRepositoryTest {
 
+    @Autowired
+    private UserRepository underTest;
+    /// This pattern (XXX) includes the 3-digit zone offset (e.g. +05:30 for India Standard Time).
+    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX");
     public static final String PHONE_NUMBER = "1234567890";
     public static final String LAST_NAME = "Doe";
     public static final String FIRST_NAME = "John";
     public static final String EMAIL = "test@example.com";
-    @Autowired
-    private UserRepository underTest;
 
     @AfterEach
     void tearDown() {
@@ -65,6 +71,8 @@ class UserRepositoryTest {
         user.setLastName(LAST_NAME);
         user.setEmail(EMAIL);
         user.setPhoneNumber(PHONE_NUMBER);
+        user.setCreatedOn(OffsetDateTime.parse("2022-08-01T10:00:00+00:00", formatter));
+        user.setUpdatedOn(OffsetDateTime.parse("2022-08-01T10:00:00+00:00", formatter));
         return user;
     }
 
