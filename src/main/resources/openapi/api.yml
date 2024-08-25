@@ -179,6 +179,13 @@ components:
           type: string
           nullable: true
           description: phone number of the user
+        createdOn:
+          type: string
+          format: date-time
+        updatedOn:
+          type: string
+          format: date-time
+
     UserRequestDto:
       type: object
       required:
@@ -207,6 +214,7 @@ components:
           minLength: 10
           maxLength: 13
           pattern: ^\d{10,13}$
+
     UsersDto:
       description: A paginated list of users
       type: object
@@ -225,6 +233,7 @@ components:
           format: int32
           description: Total number of pages
           example: 10
+
     APIError:
       type: object
       properties:
