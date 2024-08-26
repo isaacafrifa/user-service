@@ -42,15 +42,15 @@ paths:
             default: 10
         - name: orderBy
           in: query
-          description: Sort users by (defaults to id)
+          description: Fields to order users by (defaults to id). Possible values are id, firstName, lastName, email, phoneNumber, createdOn and updatedOn
           required: false
           schema:
             type: string
-            enum: [id, firstName, lastName, email, phoneNumber]
+            enum: [id, firstName, lastName, email, phoneNumber, createdOn, updatedOn]
             default: id
         - name: direction
           in: query
-          description: Sort direction (defaults to asc)
+          description: Order direction (defaults to asc). Possible values are asc and desc
           required: false
           schema:
             type: string
@@ -136,7 +136,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserDto'
+              $ref: '#/components/schemas/UserRequestDto'
       responses:
         '200':
           description: User updated successfully
@@ -171,22 +171,35 @@ components:
         id:
           type: integer
           format: int64
+          description: Unique identifier for the user
+          example: 123
         firstName:
           type: string
+          description: First name of the user
+          example: John
         lastName:
           type: string
+          description: Last name of the user
+          example: Doe
         email:
           type: string
+          format: email
+          description: Email address of the user
+          example: user@example.com
         phoneNumber:
           type: string
-          nullable: true
           description: phone number of the user
+          example: "1234567890"
         createdOn:
           type: string
           format: date-time
+          description: Date and time when the user was created
+          example: '2024-08-27T01:49:24.117062+03:00'
         updatedOn:
           type: string
           format: date-time
+          description: Date and time when the user was last updated
+          example: '2024-08-27T01:49:24.117062+03:00'
 
     UserRequestDto:
       type: object
@@ -198,8 +211,18 @@ components:
       properties:
         firstName:
           type: string
+          description: First name of the user
+          example: John
+          minLength: 2
+          maxLength: 50
+          pattern: ^[A-Za-z]+$
         lastName:
           type: string
+          description: Last name of the user
+          example: Doe
+          minLength: 2
+          maxLength: 50
+          pattern: ^[A-Za-z]+$
         # Ensure valid email format with stricter rules than basic format: email. Pattern is handled in code
         email:
           type: string
@@ -229,12 +252,12 @@ components:
           type: integer
           format: int64
           description: Total number of users
-          example: 100
+          example: 10
         totalPages:
           type: integer
           format: int32
           description: Total number of pages
-          example: 10
+          example: 2
 
     APIError:
       type: object
@@ -246,7 +269,7 @@ components:
         path:
           type: string
           description: Path of the request that caused the error
-          example: /api/v1/bookings
+          example: /api/v1/users
         timeStamp:
           type: string
           format: date-time

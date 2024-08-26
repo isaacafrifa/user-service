@@ -57,6 +57,7 @@ class UserServiceTest {
 
     private User user;
     private UserDto userDto;
+    private UserRequestDto userRequestDto;
 
     public static final Long USER_ID = 1L;
     public static final String PHONE_NUMBER = "1234567890";
@@ -149,7 +150,7 @@ class UserServiceTest {
     @Test
     void saveUser_shouldSaveBooking() {
         // given
-        var userRequestDto = createUserRequestDto();
+         userRequestDto = createUserRequestDto();
 
         given(userMapper.toEntity(userRequestDto)).willReturn(user);
         given(userRepository.save(user)).willReturn(user);
@@ -171,7 +172,7 @@ class UserServiceTest {
     @Test
     void saveBooking_shouldThrowExceptionWhenBookingAlreadyExists() {
         // given
-        var userRequestDto = createUserRequestDto();
+         userRequestDto = createUserRequestDto();
 
         given(userRepository.existsByEmailIgnoreCase(userRequestDto.getEmail())).willReturn(true);
         // when + then
@@ -189,9 +190,10 @@ class UserServiceTest {
     @Test
     void updateUser_shouldUpdateUser() {
         // given
+        userRequestDto = createUserRequestDto();
         given(userRepository.findById(any())).willReturn(Optional.of(user));
         // when
-        underTest.updateUser(USER_ID, userDto);
+        underTest.updateUser(USER_ID, userRequestDto);
         // then
         verify(userRepository).save(userArgumentCaptor.capture());
         User capturedUser = userArgumentCaptor.getValue();
@@ -207,7 +209,7 @@ class UserServiceTest {
         given(userRepository.findById(NON_EXISTENT_ID)).willReturn(Optional.empty());
         // when + then
         assertThrows(ResourceNotFoundException.class,
-                () -> underTest.updateUser(NON_EXISTENT_ID, userDto),
+                () -> underTest.updateUser(NON_EXISTENT_ID, userRequestDto),
                 "Should throw an exception");
     }
 
@@ -257,11 +259,11 @@ class UserServiceTest {
     }
 
     private UserRequestDto createUserRequestDto() {
-        final UserRequestDto userRequestDto = new UserRequestDto();
-        userRequestDto.setFirstName(user.getFirstName());
-        userRequestDto.setLastName(user.getLastName());
-        userRequestDto.setEmail(user.getEmail());
-        userRequestDto.setPhoneNumber(user.getPhoneNumber());
-        return userRequestDto;
+        var defaultUserRequestDto = new UserRequestDto();
+        defaultUserRequestDto.setFirstName(user.getFirstName());
+        defaultUserRequestDto.setLastName(user.getLastName());
+        defaultUserRequestDto.setEmail(user.getEmail());
+        defaultUserRequestDto.setPhoneNumber(user.getPhoneNumber());
+        return defaultUserRequestDto;
     }
 }

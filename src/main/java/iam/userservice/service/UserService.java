@@ -58,21 +58,21 @@ public record UserService(UserRepository userRepository, UserMapper userMapper,
         return userMapper.toDto(saved);
     }
 
-    public UserDto updateUser(Long userId, UserDto userDto) {
+    public UserDto updateUser(Long userId, UserRequestDto userRequestDto) {
         log.info("Update user with id '{}'", userId);
 
-        userValidationService.validateUserDto(userDto);
+        userValidationService.validateUserRequestDto(userRequestDto);
         var existingUser = getExistingUser(userId);
-        existingUser.setFirstName(userDto.getFirstName());
-        existingUser.setLastName(userDto.getLastName());
-        existingUser.setEmail(userDto.getEmail());
-        existingUser.setPhoneNumber(userDto.getPhoneNumber());
+        existingUser.setFirstName(userRequestDto.getFirstName());
+        existingUser.setLastName(userRequestDto.getLastName());
+        existingUser.setEmail(userRequestDto.getEmail());
+        existingUser.setPhoneNumber(userRequestDto.getPhoneNumber());
 
         try {
             log.info("User [id: {}] updated successfully", userId);
             return userMapper.toDto(userRepository.save(existingUser));
         } catch (OptimisticLockException e) {
-            log.error("Optimistic lock exception for user with id {}", userId);
+            log.error("Optimistic lock exception for user with id '{}'", userId);
             throw new UserOptimisticLockException("Concurrent modification detected. Please ty again");
         }
     }
