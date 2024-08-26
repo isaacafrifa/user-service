@@ -62,8 +62,6 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
                   $ref: '#/components/schemas/UsersDto'
         '400':
           description: Bad request (e.g., invalid parameter values)
@@ -84,6 +82,7 @@ paths:
       operationId: createUser
       description: Creates a new user
       requestBody:
+        description: User object that needs to be added
         required: true
         content:
           application/json:
@@ -110,6 +109,7 @@ paths:
           required: true
           schema:
             type: integer
+            format: int64
       responses:
         '200':
           description: Successful response
@@ -130,6 +130,7 @@ paths:
           required: true
           schema:
             type: integer
+            format: int64
       requestBody:
         required: true
         content:
@@ -156,6 +157,7 @@ paths:
           required: true
           schema:
             type: integer
+            format: int64
       responses:
         '200':
           description: User deleted successfully
