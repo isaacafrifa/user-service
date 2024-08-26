@@ -5,6 +5,7 @@ import iam.userservice.dto.UserRequestDto;
 import iam.userservice.dto.UsersDto;
 import iam.userservice.service.UserService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,7 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1")
 @RestController
 @Slf4j
-public record UserController(UserService userService) implements UsersApi{
+@RequiredArgsConstructor
+public class UserController implements UsersApi{
+    private final UserService userService;
 
     @Override
     public ResponseEntity<UsersDto> getUsers(Integer pageNo, Integer pageSize, String orderBy, String direction) {
@@ -43,9 +46,9 @@ public record UserController(UserService userService) implements UsersApi{
     }
 
     @Override
-    public ResponseEntity<UserDto> updateUser(Long id, @Valid UserDto userDto) {
+    public ResponseEntity<UserDto> updateUser(Long id, @Valid UserRequestDto userRequestDto) {
         log.debug("Received request to update booking with id '{}'", id);
-        var response = userService.updateUser(id, userDto);
+        var response = userService.updateUser(id, userRequestDto);
         return ResponseEntity.ok(response);
     }
 

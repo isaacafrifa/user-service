@@ -1,6 +1,5 @@
 package iam.userservice.service;
 
-import iam.userservice.dto.UserDto;
 import iam.userservice.dto.UserRequestDto;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
@@ -14,10 +13,6 @@ public class UserValidationService {
     public void validateUserRequestDto(UserRequestDto userRequestDto) {
         validateEmail(userRequestDto.getEmail());
         // Add other validation rules as needed
-    }
-
-    public void validateUserDto(UserDto userDto) {
-        validateEmail(userDto.getEmail());
     }
 
     private void validateEmail(String email) {
