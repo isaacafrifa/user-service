@@ -30,7 +30,7 @@ public record UserController(UserService userService) implements UsersApi{
 
     @Override
     public ResponseEntity<UserDto> getUser(Long id) {
-        log.debug("Received request to get user by id {}", id);
+        log.debug("Received request to get user by id '{}'", id);
         var response = userService.getUserById(id);
         return ResponseEntity.ok(response);
     }
@@ -40,6 +40,19 @@ public record UserController(UserService userService) implements UsersApi{
         log.debug("Received request to create user '{}'", userRequestDto);
         var response = userService.createUser(userRequestDto);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
 
+    @Override
+    public ResponseEntity<UserDto> updateUser(Long id, @Valid UserDto userDto) {
+        log.debug("Received request to update booking with id '{}'", id);
+        var response = userService.updateUser(id, userDto);
+        return ResponseEntity.ok(response);
+    }
+
+    @Override
+    public ResponseEntity<Void> deleteUser(Long id) {
+        log.debug("Received request to delete user with id '{}'", id);
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
     }
 }
