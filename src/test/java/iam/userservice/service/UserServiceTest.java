@@ -31,6 +31,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -145,6 +146,36 @@ class UserServiceTest {
         } catch (Exception e) {
             assertInstanceOf(IllegalArgumentException.class, e, "Unexpected exception type: " + e.getClass().getName());
         }
+    }
+
+    @Test
+    void getUserByUserEmail_shouldReturnUserDto() {
+        // given
+        given(userMapper.toDto(any())).willReturn(userDto);
+        given(userRepository.findByEmail(any())).willReturn(Optional.of(user));
+        // when
+        var actualDto = underTest.getUserByEmail(user.getEmail());
+        // then
+        verify(userMapper).toDto(user);
+        verify(userRepository).findByEmail(user.getEmail());
+        assertNotNull(actualDto, "Expected a UserDto to be returned");
+    }
+
+    @Test
+    void getUserByUserEmail_shouldThrowExceptionWhenUserNotFound() {
+        // given
+        given(userRepository.findByEmail(any())).willReturn(Optional.empty());
+        // when
+        var actual = underTest.getUserByEmail(EMAIL);
+        // then
+        verify(userMapper, never()).toDto(user);
+        assertNull(actual);
+    }
+
+    @Test
+    void getUserByUserEmail_shouldThrowExceptionWhenIdIsNull() {
+        // when + then
+        assertThrows(NullPointerException.class, () -> underTest.getUserByEmail(null));
     }
 
     @Test
