@@ -117,6 +117,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserDto'
+        '400':
+          description: Bad request (e.g., invalid parameter values)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
     put:
       tags:
         - users
@@ -144,6 +162,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserDto'
+        '400':
+          description: Bad request (e.g., invalid parameter values)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
     delete:
       tags:
         - users
@@ -161,6 +197,70 @@ paths:
       responses:
         '200':
           description: User deleted successfully
+        '400':
+          description: Bad request (e.g., invalid parameter values)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+  /users/email:
+    # Get a user by email
+    get:
+      tags:
+        - users
+      summary: Get a user by ID
+      operationId: getUserByEmail
+      description: Returns a single user
+      parameters:
+        - name: userEmail
+          in: query
+          description: Email of user to return
+          required: true
+          schema:
+            type: string
+            # Ensure valid email format with stricter rules than basic format: email. Pattern is handled in code
+            format: email
+            description: Email address of the user
+            example: user@example.com
+            minLength: 10
+            maxLength: 50
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDto'
+        '400':
+          description: Bad request (e.g., invalid parameter values)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
 
 
 components:

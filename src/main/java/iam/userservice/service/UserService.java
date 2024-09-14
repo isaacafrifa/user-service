@@ -16,6 +16,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 @Slf4j
 public record UserService(UserRepository userRepository, UserMapper userMapper,
@@ -42,6 +44,14 @@ public record UserService(UserRepository userRepository, UserMapper userMapper,
                             log.info("User with id {} not found", userId);
                             return new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE);
                         });
+    }
+
+    public UserDto getUserByEmail(String userEmail) {
+        log.info("Get user by userEmail '{}'", userEmail);
+
+        userValidationService.validateUserEmail(userEmail);
+        Optional<User> userOptional =  userRepository.findByEmail(userEmail.toLowerCase());
+        return userOptional.map(userMapper::toDto).orElse(null);
     }
 
     public UserDto createUser(UserRequestDto userRequestDto) {

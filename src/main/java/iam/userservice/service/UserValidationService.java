@@ -15,9 +15,12 @@ public class UserValidationService {
         // Add other validation rules as needed
     }
 
+    public void validateUserEmail(String userEmail) {
+        validateEmail(userEmail);
+    }
+
     private void validateEmail(String email) {
         Assert.notNull(email, EMAIL_ADDRESS_CANNOT_BE_NULL);
         Assert.isTrue(email.matches(EMAIL_PATTERN), INVALID_EMAIL_ADDRESS_FORMAT);
     }
-
 }

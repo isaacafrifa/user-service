@@ -39,6 +39,13 @@ public class UserController implements UsersApi{
     }
 
     @Override
+    public ResponseEntity<UserDto> getUserByEmail(String userEmail) {
+        log.debug("Received request to get user by email '{}'", userEmail);
+        var response = userService.getUserByEmail(userEmail);
+        return ResponseEntity.ok(response);
+    }
+
+    @Override
     public ResponseEntity<UserDto> createUser(@Valid UserRequestDto userRequestDto) {
         log.debug("Received request to create user '{}'", userRequestDto);
         var response = userService.createUser(userRequestDto);
