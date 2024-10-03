@@ -30,6 +30,7 @@
         <java.version>17</java.version>
         <lombok.version>1.18.32</lombok.version>
         <mapstruct.version>1.6.0.Beta1</mapstruct.version>
+        <loki.version>1.5.1</loki.version>
     </properties>
     <dependencies>
         <dependency>
@@ -121,6 +122,18 @@
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+        <!-- loki -->
+        <dependency>
+            <groupId>com.github.loki4j</groupId>
+            <artifactId>loki-logback-appender</artifactId>
+            <version>${loki.version}</version>
+        </dependency>
+        <!-- Prometheus -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+            <scope>runtime</scope>
         </dependency>
     </dependencies>
 
