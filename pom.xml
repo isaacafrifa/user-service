@@ -31,6 +31,9 @@
         <lombok.version>1.18.32</lombok.version>
         <mapstruct.version>1.6.0.Beta1</mapstruct.version>
         <loki.version>1.5.1</loki.version>
+        <maven.build.timestamp.format>yyyyMMdd.HHmmss</maven.build.timestamp.format>
+        <!--suppress UnresolvedMavenProperty -->
+        <dockerPassword>${DOCKER_PASSWORD}</dockerPassword>
     </properties>
     <dependencies>
         <dependency>
@@ -159,6 +162,19 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
+                    <!-- This block defines Docker image settings using cloud native build-packs -->
+                    <image>
+                        <name>isaacafrifa/bm-${project.artifactId}-${maven.build.timestamp}</name>
+                        <builder>dashaun/builder:tiny</builder><!--  Specify the builder to use for creating the container image  -->
+                        <publish>true</publish>
+                    </image>
+                    <docker>
+                        <publishRegistry>
+                            <username>isaacafrifa</username>
+                            <!--suppress UnresolvedMavenProperty -->
+                            <password>${DOCKER_PASSWORD}</password>
+                        </publishRegistry>
+                    </docker>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>
