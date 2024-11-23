@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  labels:
+    app: user-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-app
+  template:
+    metadata:
+      name: user-template
+      labels:
+        app: user-app
+    spec:
+      containers:
+        - name: user-service
+          image: isaacafrifa/bm-user-service-20241117.140448
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          env:
+            - name: DB_NAME
+              value: database
+            - name: DB_USERNAME
+              value: username
+            - name: DB_PASSWORD
+              value: password
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+spec:
+  selector:
+    app: user-app  # Matches the label in the user-service pod
+  ports:
+    - protocol: TCP
+      port: 8080      # The port exposed by the service
+      targetPort: 8080  # The port your container is listening on
+      nodePort: 31683  # The external port on the node (optional, can be set to a static port)
+  type: NodePort
