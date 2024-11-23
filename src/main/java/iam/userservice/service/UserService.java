@@ -10,6 +10,9 @@ import iam.userservice.exception.UserOptimisticLockException;
 import iam.userservice.repository.UserRepository;
 import jakarta.persistence.OptimisticLockException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -20,12 +23,25 @@ import java.util.Optional;
 
 @Service
 @Slf4j
-public record UserService(UserRepository userRepository, UserMapper userMapper,
-                          UserValidationService userValidationService) {
+public class UserService{
+     private final UserRepository userRepository;
+     private final UserMapper userMapper;
+     private final UserValidationService userValidationService;
 
     public static final String USER_NOT_FOUND_MESSAGE = "User not found";
     public static final String USER_ALREADY_EXISTS_MESSAGE = "User already exists";
+    public static final String USERS = "users";
 
+    public UserService(UserRepository userRepository, UserMapper userMapper, UserValidationService userValidationService) {
+        this.userRepository = userRepository;
+        this.userMapper = userMapper;
+        this.userValidationService = userValidationService;
+    }
+
+    /*
+    Not caching getAllUsers() because getAllUsers()'s dataset could be large and will consume significant memory.
+    I want to keep the memory consumption to a minimum.
+     */
     public Page<UserDto> getAllUsers(int pageNo, int pageSize, String direction, String sortBy) {
         log.info("Get all users with pageNo '{}', pageSize '{}', direction '{}' and orderBy '{}'", pageNo, pageSize, direction, sortBy);
 
@@ -34,6 +50,7 @@ public record UserService(UserRepository userRepository, UserMapper userMapper,
                 .map(userMapper::toDto);
     }
 
+    @Cacheable(value = USERS, key = "#userId")
     public UserDto getUserById(Long userId) {
         log.info("Get user by id '{}'", userId);
 
@@ -46,6 +63,7 @@ public record UserService(UserRepository userRepository, UserMapper userMapper,
                         });
     }
 
+    @Cacheable(value = USERS, key = "#userEmail")
     public UserDto getUserByEmail(String userEmail) {
         log.info("Get user by userEmail '{}'", userEmail);
 
@@ -68,6 +86,17 @@ public record UserService(UserRepository userRepository, UserMapper userMapper,
         return userMapper.toDto(saved);
     }
 
+    /**
+     * Updates user information and refreshes the cache.
+     * The 'unless' condition prevents caching when the operation fails due to
+     * optimistic locking (concurrent modification) or returns null.
+     * This ensures the cache is only updated with successful operations.
+     *
+     * @param userId user identifier
+     * @param userRequestDto updated user information
+     * @return the updated UserDto
+     */
+    @CachePut(value = USERS, key = "#userId", unless = "#result == null")
     public UserDto updateUser(Long userId, UserRequestDto userRequestDto) {
         log.info("Update user with id '{}'", userId);
 
@@ -87,12 +116,17 @@ public record UserService(UserRepository userRepository, UserMapper userMapper,
         }
     }
 
-    public void deleteUser(Long id) {
-        log.info("Delete user with id '{}'", id);
+    /**
+     * Deletes user and refreshes the cache.
+     * @param userId user identifier
+     */
+    @CacheEvict(value = USERS, key = "#userId")
+    public void deleteUser(Long userId) {
+        log.info("Delete user with id '{}'", userId);
 
-        getExistingUser(id);
-        userRepository.deleteById(id);
-        log.info("User with id '{}' deleted successfully", id);
+        getExistingUser(userId);
+        userRepository.deleteById(userId);
+        log.info("User with id '{}' deleted successfully", userId);
     }
 
     private User getExistingUser(Long userId) {

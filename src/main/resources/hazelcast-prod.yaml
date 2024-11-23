@@ -1,0 +1,11 @@
+hazelcast:
+  # Adding cluster-name as an extra security measure to prevent accidental joining
+  # of different environments (dev/qa/prod) even if they share the same network
+  cluster-name: prod-cluster
+  network:
+    join:
+      multicast:
+        enabled: false
+      tcp-ip:
+        enabled: true
+#        members: [10.0.0.1, 10.0.0.2] # Explicitly list member IPs
