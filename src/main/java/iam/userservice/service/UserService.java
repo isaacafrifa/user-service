@@ -4,12 +4,18 @@ import iam.userservice.dto.UserDto;
 import iam.userservice.dto.UserMapper;
 import iam.userservice.dto.UserRequestDto;
 import iam.userservice.entity.User;
+import iam.userservice.events.UserEmailUpdatedEvent;
+import iam.userservice.exception.EventPublishingException;
 import iam.userservice.exception.ResourceAlreadyExistsException;
 import iam.userservice.exception.ResourceNotFoundException;
 import iam.userservice.exception.UserOptimisticLockException;
 import iam.userservice.repository.UserRepository;
 import jakarta.persistence.OptimisticLockException;
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.AmqpException;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -19,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
@@ -27,15 +34,23 @@ public class UserService{
      private final UserRepository userRepository;
      private final UserMapper userMapper;
      private final UserValidationService userValidationService;
+     private final RabbitTemplate rabbitTemplate;
+
+    @Value("${rabbitmq.exchange.name}")
+    private String exchangeName;
+
+    @Value("${rabbitmq.routing.key}")
+    private String routingKey;
 
     public static final String USER_NOT_FOUND_MESSAGE = "User not found";
     public static final String USER_ALREADY_EXISTS_MESSAGE = "User already exists";
     public static final String USERS = "users";
 
-    public UserService(UserRepository userRepository, UserMapper userMapper, UserValidationService userValidationService) {
+    public UserService(UserRepository userRepository, UserMapper userMapper, UserValidationService userValidationService, RabbitTemplate rabbitTemplate) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.userValidationService = userValidationService;
+        this.rabbitTemplate = rabbitTemplate;
     }
 
     /*
@@ -97,23 +112,43 @@ public class UserService{
      * @return the updated UserDto
      */
     @CachePut(value = USERS, key = "#userId", unless = "#result == null")
+    @Transactional
     public UserDto updateUser(Long userId, UserRequestDto userRequestDto) {
         log.info("Update user with id '{}'", userId);
 
         userValidationService.validateUserRequestDto(userRequestDto);
         var existingUser = getExistingUser(userId);
+
+        // Only publish event if email actually changed
+        String oldEmail = existingUser.getEmail();
+        boolean emailChanged = !oldEmail.equals(userRequestDto.getEmail());
+
+        // Update user fields
         existingUser.setFirstName(userRequestDto.getFirstName());
         existingUser.setLastName(userRequestDto.getLastName());
         existingUser.setEmail(userRequestDto.getEmail());
         existingUser.setPhoneNumber(userRequestDto.getPhoneNumber());
 
+        User updatedUser;
         try {
+            updatedUser = userRepository.save(existingUser);
             log.info("User [id: {}] updated successfully", userId);
-            return userMapper.toDto(userRepository.save(existingUser));
         } catch (OptimisticLockException e) {
             log.error("Optimistic lock exception for user with id '{}'", userId);
-            throw new UserOptimisticLockException("Concurrent modification detected. Please ty again");
+            throw new UserOptimisticLockException("Concurrent modification detected. Please try again");
         }
+
+        // Only publish event if email changed
+        if (emailChanged) {
+            try {
+                publishEmailUpdateEvent(existingUser.getId(), oldEmail, userRequestDto.getEmail());
+            } catch (AmqpException e) {
+                log.error("Failed to publish email update event for user '{}': {}", userId, e.getMessage());
+                throw new EventPublishingException("Failed to publish email update event: " + e.getMessage());
+            }
+        }
+
+        return userMapper.toDto(updatedUser);
     }
 
     /**
@@ -142,5 +177,20 @@ public class UserService{
         assert direction != null;
         if (direction.contains("desc")) return Sort.Direction.DESC;
         return Sort.Direction.ASC;
+    }
+
+    /* Create and publish event
+     */
+    private void publishEmailUpdateEvent(Long userId, String oldEmail, String newEmail) {
+        UserEmailUpdatedEvent event = UserEmailUpdatedEvent.builder()
+                .userId(userId)
+                .oldEmail(oldEmail)
+                .newEmail(newEmail)
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        log.info("Publishing email update event for user: {}", userId);
+        rabbitTemplate.convertAndSend(exchangeName, routingKey, event);
+        log.info("Email update event published successfully");
     }
 }

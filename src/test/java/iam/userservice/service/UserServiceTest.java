@@ -4,6 +4,8 @@ import iam.userservice.dto.UserDto;
 import iam.userservice.dto.UserMapper;
 import iam.userservice.dto.UserRequestDto;
 import iam.userservice.entity.User;
+import iam.userservice.events.UserEmailUpdatedEvent;
+import iam.userservice.exception.EventPublishingException;
 import iam.userservice.exception.ResourceAlreadyExistsException;
 import iam.userservice.exception.ResourceNotFoundException;
 import iam.userservice.repository.UserRepository;
@@ -16,12 +18,15 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.amqp.AmqpException;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -33,8 +38,11 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -53,8 +61,12 @@ class UserServiceTest {
     private UserMapper userMapper;
     @Mock
     private UserValidationService userValidationService;
+    @Mock
+    private RabbitTemplate rabbitTemplate;
     @Captor
     ArgumentCaptor<User> userArgumentCaptor;
+    @Captor
+    private ArgumentCaptor<UserEmailUpdatedEvent> eventArgumentCaptor;
 
     private User user;
     private UserDto userDto;
@@ -68,11 +80,17 @@ class UserServiceTest {
     public static final long NON_EXISTENT_ID = 33L;
     // This pattern (XXX) includes the 3-digit zone offset (e.g. +05:30 for India Standard Time).
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX");
+    private static final String EXCHANGE_NAME = "user.exchange";
+    private static final String ROUTING_KEY = "user.email.update";
 
     @BeforeEach
     void setUp() {
         user = createDefaultUser();
         userDto = createDefaultUserDto();
+        // Set the exchange name and routing key using reflection
+        ReflectionTestUtils.setField(underTest, "exchangeName", EXCHANGE_NAME);
+        ReflectionTestUtils.setField(underTest, "routingKey", ROUTING_KEY);
+
     }
 
     @Test
@@ -222,11 +240,22 @@ class UserServiceTest {
     void updateUser_shouldUpdateUser() {
         // given
         userRequestDto = createUserRequestDto();
+        // Set the same email to ensure no event is published
+        userRequestDto.setEmail(user.getEmail()); // Make sure emails match
         given(userRepository.findById(any())).willReturn(Optional.of(user));
+        given(userMapper.toDto(any())).willReturn(new UserDto());
+
         // when
         underTest.updateUser(USER_ID, userRequestDto);
+
         // then
         verify(userRepository).save(userArgumentCaptor.capture());
+        verify(rabbitTemplate, never()).convertAndSend(
+                eq("exchangeName"),
+                eq("routingKey"),
+                any(UserEmailUpdatedEvent.class)
+        );
+
         User capturedUser = userArgumentCaptor.getValue();
         assertEquals(user.getEmail(), capturedUser.getEmail());
         assertEquals(user.getFirstName(), capturedUser.getFirstName());
@@ -235,14 +264,105 @@ class UserServiceTest {
     }
 
     @Test
-    void updateBooking_shouldThrowExceptionForNonexistentId() {
+    void updateUser_withEmailChange_shouldPublishEvent() {
+        // given
+        String oldEmail = "old@email.com";
+        String newEmail = "new@email.com";
+
+        // Set up user with ID
+        user.setId(USER_ID);
+        user.setEmail(oldEmail);
+
+        // Set up request DTO
+        userRequestDto = createUserRequestDto();
+        userRequestDto.setEmail(newEmail);
+
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
+        given(userMapper.toDto(any())).willReturn(new UserDto());
+        given(userRepository.save(any(User.class))).willReturn(user);
+
+        // when
+        underTest.updateUser(USER_ID, userRequestDto);
+
+        // then
+        verify(userRepository).save(userArgumentCaptor.capture());
+        verify(rabbitTemplate).convertAndSend(
+                eq(EXCHANGE_NAME),
+                eq(ROUTING_KEY),
+                eventArgumentCaptor.capture()
+        );
+
+        // Verify user was updated correctly
+        User capturedUser = userArgumentCaptor.getValue();
+        assertEquals(USER_ID, capturedUser.getId());
+        assertEquals(newEmail, capturedUser.getEmail());
+        assertEquals(userRequestDto.getFirstName(), capturedUser.getFirstName());
+        assertEquals(userRequestDto.getLastName(), capturedUser.getLastName());
+        assertEquals(userRequestDto.getPhoneNumber(), capturedUser.getPhoneNumber());
+
+        // Verify event was published with correct data
+        UserEmailUpdatedEvent capturedEvent = eventArgumentCaptor.getValue();
+        assertEquals(oldEmail, capturedEvent.getOldEmail());
+        assertEquals(newEmail, capturedEvent.getNewEmail());
+        assertEquals(USER_ID, capturedEvent.getUserId());
+        assertNotNull(capturedEvent.getUpdatedAt());
+    }
+
+
+    @Test
+    void updateUser_shouldThrowExceptionForNonexistentId() {
         // given
         given(userRepository.findById(NON_EXISTENT_ID)).willReturn(Optional.empty());
+
         // when + then
         assertThrows(ResourceNotFoundException.class,
                 () -> underTest.updateUser(NON_EXISTENT_ID, userRequestDto),
                 "Should throw an exception");
+
+        verify(rabbitTemplate, never()).convertAndSend(
+                eq(EXCHANGE_NAME),
+                eq(ROUTING_KEY),
+                any(UserEmailUpdatedEvent.class)
+        );
+        verify(userRepository, never()).save(any(User.class));
     }
+
+    @Test
+    void updateUser_whenEventPublishingFails_shouldThrowEventPublishingException() {
+        // given
+        String oldEmail = "old@email.com";
+        String newEmail = "new@email.com";
+        user.setEmail(oldEmail);
+        userRequestDto = createUserRequestDto();
+        userRequestDto.setEmail(newEmail);
+
+        given(userRepository.findById(any())).willReturn(Optional.of(user));
+
+        doThrow(new AmqpException("Failed to publish"))
+                .when(rabbitTemplate)
+                .convertAndSend(
+                        eq(EXCHANGE_NAME),
+                        eq(ROUTING_KEY),
+                        any(UserEmailUpdatedEvent.class)
+                );
+
+        // when + then
+        EventPublishingException exception = assertThrows(EventPublishingException.class,
+                () -> underTest.updateUser(USER_ID, userRequestDto));
+
+        // Verify the exception message
+        assertTrue(exception.getMessage().contains("Failed to publish email update event"));
+
+        // Verify that the user was saved but event publishing failed
+        verify(userRepository).save(any(User.class));
+        verify(rabbitTemplate).convertAndSend(
+                eq(EXCHANGE_NAME),
+                eq(ROUTING_KEY),
+                any(UserEmailUpdatedEvent.class)
+        );
+    }
+
+
 
     @Test
     void deleteUser_shouldDeleteUser() {
