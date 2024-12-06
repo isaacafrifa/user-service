@@ -1,0 +1,13 @@
+hazelcast:
+  network:
+    join:
+      multicast:
+        enabled: true # Hazelcast nodes will use multicast to automatically discover other nodes in the same network
+  map:
+    users:
+      max-idle-seconds: 1800  # Entries expire if not accessed for 30 minutes
+      time-to-live-seconds: 3600  # Maximum lifetime of 1 hour
+      eviction:
+        size: 1000  # Optional: Maximum number of entries
+        max-size-policy: PER_NODE # Each Hazelcast node maintains its own size limit
+        eviction-policy: LRU # Least Recently Used entries are evicted when the cache reaches its limit or entries expire
