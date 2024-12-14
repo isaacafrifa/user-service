@@ -1,0 +1,121 @@
+# Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-deployment
+  labels:
+    app: user-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-app
+  template:
+    metadata:
+      name: user-template
+      labels:
+        app: user-app
+    spec:
+      containers:
+        - name: user-service
+          image: isaacafrifa/bm-user-service-20241208.021218:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secrets
+                  key: POSTGRES_DB
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secrets
+                  key: POSTGRES_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secrets
+                  key: POSTGRES_PASSWORD
+             # Shared Infrastructure Variables
+            ## Loki
+            - name: LOKI_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: infra-config
+                  key: LOKI_URL
+            ## rabbitMQ
+            - name: RABBITMQ_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: infra-config
+                  key:  RABBITMQ_HOST
+            - name: RABBITMQ_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: infra-config
+                  key:  RABBITMQ_PORT
+            - name: RABBITMQ_MANAGEMENT_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: infra-config
+                  key:  RABBITMQ_MANAGEMENT_PORT
+            - name: RABBITMQ_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: infra-secrets
+                  key: RABBITMQ_USERNAME
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: infra-secrets
+                  key: RABBITMQ_PASSWORD
+           ## zipkin
+            - name: MANAGEMENT_ZIPKIN_TRACING_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: infra-config
+                  key: MANAGEMENT_ZIPKIN_TRACING_ENDPOINT
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          # add resource limits and requests later
+
+---
+
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  labels:
+    app: user-app    # Match the deployment labels
+spec:
+  type: ClusterIP
+  selector:
+    app: user-app  # Matches Deployment's label
+  ports:
+    - protocol: TCP
+      port: 8080      # The port other services use to access
+      targetPort: 8080  # The container port
