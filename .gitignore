@@ -3,7 +3,15 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+### env file
 .env
+
+### k8s files
+*-secrets.yaml
+*-config.yaml
+secrets.yaml
+*-secret.yaml
+*.key
 
 ### STS ###
 .apt_generated

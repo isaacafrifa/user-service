@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-db-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-postgres
+  template: # Template contains the blueprint for pods
+    metadata:
+      labels:
+        app: user-postgres
+    spec:
+      containers:
+        - name: user-db
+          image: postgres:16.1
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secrets
+                  key: POSTGRES_DB
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-data
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+      volumes:
+        - name: postgres-data # matches volumeMounts name above
+          persistentVolumeClaim:
+            claimName: postgres-pvc # references the PVC in 'postgres-storage.yaml'
+---
+
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-db-service
+  labels:
+    app: user-postgres
+    tier: database
+spec:
+  type: ClusterIP # Only expose the db inside the cluster
+  ports:
+    - port: 5432
+      targetPort: 5432
+      protocol: TCP
+  selector:
+    app: user-postgres  # Matches Deployment's label

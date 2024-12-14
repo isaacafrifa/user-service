@@ -1,0 +1,37 @@
+# postgres-storage.yaml
+# Define the PersistentVolume first
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres-pv
+spec:
+  capacity:
+    storage: 500Mi
+  volumeMode: Filesystem # default and most common mode
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain    # Keeps data when PVC is deleted
+  storageClassName: standard               # Default storage class in Minikube
+  hostPath:                               # For Minikube, uses local machine storage
+    path: "/var/lib/postgresql/data"           # Directory on your host machine
+
+---
+
+# PersistentVolumeClaim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc   # to be referenced in the Deployment
+spec:
+  storageClassName: standard   # Must match PV's storageClassName. 'standard' is the default storage class
+  accessModes:
+    # ReadWriteOnce means the volume can be mounted as read-write by a single node
+    # Other options are:
+    # - ReadOnlyMany (read-only by many nodes)
+    # - ReadWriteMany (read-write by many nodes)
+    - ReadWriteOnce
+  resources:
+    requests:
+      # Request half a gigabyte of storage
+      # Can be increased but not decreased after creation
+      storage: 500Mi
