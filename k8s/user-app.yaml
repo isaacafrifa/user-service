@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: user-service
-          image: isaacafrifa/bm-user-service-20241208.021218:latest
+          image: isaacafrifa/bm-user-service:0.0.1-SNAPSHOT-20250108-2033
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -27,27 +27,27 @@ spec:
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: postgres-config
+                  name: user-config
                   key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: postgres-config
+                  name: user-config
                   key: DB_PORT
             - name: DB_NAME
               valueFrom:
                 secretKeyRef:
-                  name: postgres-secrets
+                  name: user-secrets
                   key: POSTGRES_DB
             - name: DB_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: postgres-secrets
+                  name: user-secrets
                   key: POSTGRES_USER
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: postgres-secrets
+                  name: user-secrets
                   key: POSTGRES_PASSWORD
              # Shared Infrastructure Variables
             ## Loki
