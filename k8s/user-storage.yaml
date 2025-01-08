@@ -1,4 +1,4 @@
-# postgres-storage.yaml
+# user-storage.yaml
 # Define the PersistentVolume first
 apiVersion: v1
 kind: PersistentVolume

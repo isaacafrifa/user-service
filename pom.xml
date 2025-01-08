@@ -32,7 +32,9 @@
         <mapstruct.version>1.6.0.Beta1</mapstruct.version>
         <flyway.version>11.0.1</flyway.version>
         <loki.version>1.5.1</loki.version>
-        <maven.build.timestamp.format>yyyyMMdd.HHmmss</maven.build.timestamp.format>
+        <maven.build.timestamp.format>yyyyMMdd-HHmm</maven.build.timestamp.format>
+        <docker.image.name>isaacafrifa/bm-${project.artifactId}</docker.image.name>
+        <docker.image.tag>${project.version}-${maven.build.timestamp}</docker.image.tag>
         <!--suppress UnresolvedMavenProperty -->
         <dockerPassword>${DOCKER_PASSWORD}</dockerPassword>
     </properties>
@@ -186,7 +188,7 @@
                 <configuration>
                     <!-- This block defines Docker image settings using cloud native build-packs -->
                     <image>
-                        <name>isaacafrifa/bm-${project.artifactId}-${maven.build.timestamp}</name>
+                        <name>${docker.image.name}:${docker.image.tag}</name>
                         <builder>dashaun/builder:tiny</builder><!--  Specify the builder to use for creating the container image  -->
                         <publish>true</publish>
                     </image>

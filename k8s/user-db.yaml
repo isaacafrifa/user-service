@@ -19,17 +19,17 @@ spec:
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
-                  name: postgres-secrets
+                  name: user-secrets
                   key: POSTGRES_USER
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: postgres-secrets
+                  name: user-secrets
                   key: POSTGRES_PASSWORD
             - name: POSTGRES_DB
               valueFrom:
                 secretKeyRef:
-                  name: postgres-secrets
+                  name: user-secrets
                   key: POSTGRES_DB
           ports:
             - containerPort: 5432
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: postgres-data # matches volumeMounts name above
           persistentVolumeClaim:
-            claimName: postgres-pvc # references the PVC in 'postgres-storage.yaml'
+            claimName: postgres-pvc # references the PVC in 'user-storage.yaml'
 ---
 
 # Service
