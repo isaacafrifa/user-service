@@ -17,5 +17,10 @@ BookMe manages bookings and this repository is the user service for BookMe
 - Prometheus
 - Maven
 
+## Application Architecture 
+*This disgram was automatically created by* [GitDiagram](https://gitdiagram.com)
+
+![diagram (2)](https://github.com/user-attachments/assets/f2d4efe4-ea36-4479-a589-4f2fcf113fe6)
+
   
 _Stay tuned for further updates!_
