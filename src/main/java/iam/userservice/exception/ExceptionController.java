@@ -52,8 +52,10 @@ public class ExceptionController extends ResponseEntityExceptionHandler {
 
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, @NonNull HttpHeaders headers, @NonNull HttpStatusCode status, WebRequest request) {
-        List<String> errors = ex.getBindingResult().getFieldErrors().stream()
-                .map(DefaultMessageSourceResolvable::getDefaultMessage)
+        List<String> errors = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(error -> error.getField() + " " + error.getDefaultMessage())
                 .toList();
         String errorString = String.join(", ", errors);
         APIError apiError = new APIError(errorString, extractPath(request.getDescription(false)));
