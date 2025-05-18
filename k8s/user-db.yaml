@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: user-db
-          image: postgres:16.1
+          image: postgres:16.1-alpine # Lightweight Alpine-based image, perfect for local dev where minimal resource usage is required
           env:
             - name: POSTGRES_USER
               valueFrom:
@@ -36,13 +36,14 @@ spec:
           volumeMounts:
             - mountPath: /var/lib/postgresql/data
               name: postgres-data
+       # Small, conservative resource values — enough for this basic case
           resources:
             requests:
-              cpu: "200m"
-              memory: "512Mi"
+              memory: "150Mi"
+              cpu: "100m"
             limits:
-              cpu: "500m"
-              memory: "1Gi"
+              memory: "300Mi"
+              cpu: "200m"
       volumes:
         - name: postgres-data # matches volumeMounts name above
           persistentVolumeClaim:
