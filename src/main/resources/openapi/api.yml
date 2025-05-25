@@ -62,7 +62,7 @@ paths:
           content:
             application/json:
               schema:
-                  $ref: '#/components/schemas/UsersDto'
+                $ref: '#/components/schemas/UsersDto'
         '400':
           description: Bad request (e.g., invalid parameter values)
           content:
@@ -70,8 +70,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/APIError'
         '500':
-           description: Internal server error
-           content:
+          description: Internal server error
+          content:
             application/json:
               schema:
                 $ref: '#/components/schemas/APIError'
@@ -220,19 +220,18 @@ paths:
     get:
       tags:
         - users
-      summary: Get a user by ID
+      summary: Get a user by email
       operationId: getUserByEmail
       description: Returns a single user
       parameters:
         - name: userEmail
           in: query
-          description: Email of user to return
+          description: Email address of user to return
           required: true
           schema:
             type: string
             # Ensure valid email format with stricter rules than basic format: email. Pattern is handled in code
             format: email
-            description: Email address of the user
             example: user@example.com
             minLength: 10
             maxLength: 50
@@ -375,3 +374,12 @@ components:
           format: date-time
           description: Timestamp of the error
           example: '2023-05-25T12:34:56.000Z'
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: We currently support JWT token for authentication
+security:
+  - bearerAuth: [] # Globally, all routes are protected
