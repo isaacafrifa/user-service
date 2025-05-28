@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: user-service
-          image: isaacafrifa/bm-user-service:0.0.1-SNAPSHOT-20250518-2125
+          image: isaacafrifa/bm-user-service:0.0.1-SNAPSHOT-20250525-2203
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -88,6 +88,12 @@ spec:
                 configMapKeyRef:
                   name: infra-config
                   key: MANAGEMENT_ZIPKIN_TRACING_ENDPOINT
+            ## keycloak
+            - name: KEYCLOAK_JWT_ISSUER_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: infra-config
+                  key: KEYCLOAK_JWT_ISSUER_URI
          # Lower resources ideal for local dev. Update when doing heavy processing or caching.
           resources:
             requests:

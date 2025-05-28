@@ -376,10 +376,14 @@ components:
           example: '2023-05-25T12:34:56.000Z'
 
   securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-      description: We currently support JWT token for authentication
+    oauth2:
+      type: oauth2
+      description: Keycloak OAuth2 flow with PKCE
+      flows:
+        authorizationCode:
+          authorizationUrl: ${KEYCLOAK_JWT_ISSUER_URI}/protocol/openid-connect/auth
+          tokenUrl: ${KEYCLOAK_JWT_ISSUER_URI}/protocol/openid-connect/token
+          scopes:
+            openid: Access your user information
 security:
-  - bearerAuth: [] # Globally, all routes are protected
+  - oauth2: [] # Globally, all routes are protected
