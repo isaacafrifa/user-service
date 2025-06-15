@@ -1,15 +1,19 @@
 package iam.userservice.service;
 
-import iam.userservice.dto.UserDto;
-import iam.userservice.dto.UserMapper;
-import iam.userservice.dto.UserRequestDto;
+import iam.userservice.mapper.UserDto;
+import iam.userservice.mapper.UserFilterDto;
+import iam.userservice.mapper.UserFilterMapper;
+import iam.userservice.mapper.UserMapper;
+import iam.userservice.mapper.UserRequestDto;
 import iam.userservice.entity.User;
 import iam.userservice.events.UserEmailUpdatedEvent;
 import iam.userservice.exception.EventPublishingException;
 import iam.userservice.exception.ResourceAlreadyExistsException;
 import iam.userservice.exception.ResourceNotFoundException;
 import iam.userservice.exception.UserOptimisticLockException;
+import iam.userservice.util.Pagination;
 import iam.userservice.repository.UserRepository;
+import iam.userservice.util.UserFilterCriteria;
 import jakarta.persistence.OptimisticLockException;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +39,8 @@ public class UserService{
      private final UserMapper userMapper;
      private final UserValidationService userValidationService;
      private final RabbitTemplate rabbitTemplate;
+     private final UserSearchService userSearchService;
+    private final UserFilterMapper userFilterMapper;
 
     @Value("${rabbitmq.exchange.name}")
     private String exchangeName;
@@ -46,11 +52,13 @@ public class UserService{
     public static final String USER_ALREADY_EXISTS_MESSAGE = "User already exists";
     public static final String USERS = "users";
 
-    public UserService(UserRepository userRepository, UserMapper userMapper, UserValidationService userValidationService, RabbitTemplate rabbitTemplate) {
+    public UserService(UserRepository userRepository, UserMapper userMapper, UserValidationService userValidationService, RabbitTemplate rabbitTemplate, UserSearchService userSearchService, UserFilterMapper userFilterMapper) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.userValidationService = userValidationService;
         this.rabbitTemplate = rabbitTemplate;
+        this.userSearchService = userSearchService;
+        this.userFilterMapper = userFilterMapper;
     }
 
     /*
@@ -193,4 +201,26 @@ public class UserService{
         rabbitTemplate.convertAndSend(exchangeName, routingKey, event);
         log.info("Email update event published successfully");
     }
+
+    /**
+     * Search users based on the provided criteria.
+     * 
+     * @param filterDto the filter criteria
+     * @param pageNo the page number
+     * @param pageSize the page size
+     * @param direction the sort direction
+     * @param sortBy the field to sort by
+     * @return a page of users matching the filter criteria
+     */
+    public Page<UserDto> searchUsers(UserFilterDto filterDto, int pageNo, int pageSize, String direction, String sortBy) {
+       final Pagination pagination = Pagination.builder()
+                .pageNo(pageNo)
+                .pageSize(pageSize)
+                .direction(direction)
+                .sortBy(sortBy)
+                .build();
+       final UserFilterCriteria userFilterCriteria = userFilterMapper.toCriteria(filterDto);
+        return userSearchService.searchUsers(userFilterCriteria, pagination);
+    }
+
 }

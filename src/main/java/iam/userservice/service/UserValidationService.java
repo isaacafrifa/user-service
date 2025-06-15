@@ -1,6 +1,6 @@
 package iam.userservice.service;
 
-import iam.userservice.dto.UserRequestDto;
+import iam.userservice.mapper.UserRequestDto;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
