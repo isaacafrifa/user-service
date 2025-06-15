@@ -451,6 +451,41 @@ public class UserSearchSteps {
             .getResponseBody();
     }
 
+
+    @When("the endpoint {string} to get users is hit with no filters")
+    public void theEndpointToGetUsersIsHitWithNoFilters(String endpoint) {
+        // Create empty filter criteria
+        UserFilterCriteria filterDto = new UserFilterCriteria();
+
+        // Default pagination parameters
+        int pageNo = 0;
+        int pageSize = 10;
+        String orderBy = "id";
+        String direction = "asc";
+
+        // Create final copies of the variables for use in the lambda
+        final int finalPageNo = pageNo;
+        final int finalPageSize = pageSize;
+        final String finalOrderBy = orderBy;
+        final String finalDirection = direction;
+
+        response = webTestClient.post()
+            .uri(uriBuilder -> uriBuilder
+                .path("/api/v1" + endpoint)
+                .queryParam("pageNo", finalPageNo)
+                .queryParam("pageSize", finalPageSize)
+                .queryParam("orderBy", finalOrderBy)
+                .queryParam("direction", finalDirection)
+                .build())
+            .bodyValue(filterDto)
+            .exchange();
+
+        usersResponse = response.expectStatus().isOk()
+            .expectBody(UsersDto.class)
+            .returnResult()
+            .getResponseBody();
+    }
+
     @When("the endpoint {string} to get users is hit with filters and sorting")
     public void theEndpointToGetUsersIsHitWithFiltersAndSorting(String endpoint, DataTable dataTable) {
         List<Map<String, String>> rows = dataTable.asMaps(String.class, String.class);
@@ -706,6 +741,27 @@ public class UserSearchSteps {
     @Then("the total pages should be {int}")
     public void theTotalPagesShouldBe(int totalPages) {
         assertEquals(totalPages, usersResponse.getTotalPages());
+    }
+
+    @Then("the response should include all users")
+    public void theResponseShouldIncludeAllUsers() {
+        // Check that all users are included in the response
+        // We don't check specific IDs because they might be different in each test run
+        // Instead, we check that the response contains 4 users, which is already done by the previous step
+        // We also check that each user has the expected properties
+        List<UserDto> users = usersResponse.getContent();
+
+        assertEquals(4, users.size(), "Response should contain all users");
+
+        // Check that the response includes users with the expected properties
+        assertTrue(users.stream().anyMatch(u -> "John".equals(u.getFirstName()) && "Doe".equals(u.getLastName())), 
+                "Response should include John Doe");
+        assertTrue(users.stream().anyMatch(u -> "Jane".equals(u.getFirstName()) && "Smith".equals(u.getLastName())), 
+                "Response should include Jane Smith");
+        assertTrue(users.stream().anyMatch(u -> "John".equals(u.getFirstName()) && "Smith".equals(u.getLastName())), 
+                "Response should include John Smith");
+        assertTrue(users.stream().anyMatch(u -> "Alice".equals(u.getFirstName()) && "Johnson".equals(u.getLastName())), 
+                "Response should include Alice Johnson");
     }
 
     @Then("the users should be sorted by {string} in {string} order")

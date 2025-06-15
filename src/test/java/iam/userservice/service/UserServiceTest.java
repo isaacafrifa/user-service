@@ -1,6 +1,8 @@
 package iam.userservice.service;
 
 import iam.userservice.mapper.UserDto;
+import iam.userservice.mapper.UserFilterDto;
+import iam.userservice.mapper.UserFilterMapper;
 import iam.userservice.mapper.UserMapper;
 import iam.userservice.mapper.UserRequestDto;
 import iam.userservice.entity.User;
@@ -9,6 +11,8 @@ import iam.userservice.exception.EventPublishingException;
 import iam.userservice.exception.ResourceAlreadyExistsException;
 import iam.userservice.exception.ResourceNotFoundException;
 import iam.userservice.repository.UserRepository;
+import iam.userservice.util.Pagination;
+import iam.userservice.util.UserFilterCriteria;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -63,6 +67,10 @@ class UserServiceTest {
     private UserValidationService userValidationService;
     @Mock
     private RabbitTemplate rabbitTemplate;
+    @Mock
+    private UserSearchService userSearchService;
+    @Mock
+    private UserFilterMapper userFilterMapper;
     @Captor
     ArgumentCaptor<User> userArgumentCaptor;
     @Captor
@@ -416,5 +424,78 @@ class UserServiceTest {
         defaultUserRequestDto.setEmail(user.getEmail());
         defaultUserRequestDto.setPhoneNumber(user.getPhoneNumber());
         return defaultUserRequestDto;
+    }
+
+    @Test
+    void searchUsers_shouldReturnUsers() {
+        // given
+        UserFilterDto filterDto = new UserFilterDto();
+        filterDto.addEmailsItem(EMAIL);
+
+        UserFilterCriteria filterCriteria = new UserFilterCriteria();
+        filterCriteria.setEmails(Collections.singletonList(EMAIL));
+
+        Page<UserDto> expectedPage = new PageImpl<>(Collections.singletonList(userDto));
+
+        given(userFilterMapper.toCriteria(filterDto)).willReturn(filterCriteria);
+        given(userSearchService.searchUsers(eq(filterCriteria), any(Pagination.class))).willReturn(expectedPage);
+
+        // when
+        Page<UserDto> result = underTest.searchUsers(filterDto, 0, 10, "asc", "id");
+
+        // then
+        verify(userFilterMapper).toCriteria(filterDto);
+        verify(userSearchService).searchUsers(eq(filterCriteria), any(Pagination.class));
+
+        assertEquals(1, result.getTotalElements());
+        assertEquals(userDto, result.getContent().get(0));
+    }
+
+    @Test
+    void searchUsers_shouldReturnEmptyPage() {
+        // given
+        UserFilterDto filterDto = new UserFilterDto();
+        filterDto.addFirstNamesItem("NonExistentName");
+
+        UserFilterCriteria filterCriteria = new UserFilterCriteria();
+        filterCriteria.setFirstNames(Collections.singletonList("NonExistentName"));
+
+        Page<UserDto> emptyPage = Page.empty();
+
+        given(userFilterMapper.toCriteria(filterDto)).willReturn(filterCriteria);
+        given(userSearchService.searchUsers(eq(filterCriteria), any(Pagination.class))).willReturn(emptyPage);
+
+        // when
+        Page<UserDto> result = underTest.searchUsers(filterDto, 0, 10, "asc", "id");
+
+        // then
+        verify(userFilterMapper).toCriteria(filterDto);
+        verify(userSearchService).searchUsers(eq(filterCriteria), any(Pagination.class));
+
+        assertEquals(0, result.getTotalElements());
+        assertTrue(result.getContent().isEmpty());
+    }
+
+    @Test
+    void searchUsers_shouldReturnAllUsersWhenNoFiltersProvided() {
+        // given
+        UserFilterDto emptyFilterDto = new UserFilterDto();
+        UserFilterCriteria emptyFilterCriteria = new UserFilterCriteria();
+
+        // Create a page with all users
+        Page<UserDto> allUsersPage = new PageImpl<>(Collections.singletonList(userDto));
+
+        given(userFilterMapper.toCriteria(emptyFilterDto)).willReturn(emptyFilterCriteria);
+        given(userSearchService.searchUsers(eq(emptyFilterCriteria), any(Pagination.class))).willReturn(allUsersPage);
+
+        // when
+        Page<UserDto> result = underTest.searchUsers(emptyFilterDto, 0, 10, "asc", "id");
+
+        // then
+        verify(userFilterMapper).toCriteria(emptyFilterDto);
+        verify(userSearchService).searchUsers(eq(emptyFilterCriteria), any(Pagination.class));
+
+        assertEquals(1, result.getTotalElements());
+        assertEquals(userDto, result.getContent().get(0));
     }
 }
