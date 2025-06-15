@@ -22,6 +22,6 @@ public interface Predicates {
     }
 
     private String constructLikePattern(String matchPattern) {
-        return "%%" + escapeSearchField(matchPattern) + "%%";
+        return "%" + escapeSearchField(matchPattern) + "%";
     }
 }
