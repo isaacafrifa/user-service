@@ -1,4 +1,4 @@
-package iam.userservice.dto;
+package iam.userservice.mapper;
 
 import iam.userservice.entity.User;
 import org.mapstruct.Mapper;

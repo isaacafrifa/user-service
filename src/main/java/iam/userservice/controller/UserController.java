@@ -1,8 +1,9 @@
 package iam.userservice.controller;
 
-import iam.userservice.dto.UserDto;
-import iam.userservice.dto.UserRequestDto;
-import iam.userservice.dto.UsersDto;
+import iam.userservice.mapper.UserDto;
+import iam.userservice.mapper.UserFilterDto;
+import iam.userservice.mapper.UserRequestDto;
+import iam.userservice.mapper.UsersDto;
 import iam.userservice.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -65,4 +66,20 @@ public class UserController implements UsersApi{
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }
+
+    @Override
+    public ResponseEntity<UsersDto> searchUsers(UserFilterDto userFilterDto, Integer pageNo, Integer pageSize, String orderBy, String direction) {
+
+        log.debug("Received request to search users with criteria: {}, pageNo={}, pageSize={}, orderBy={}, direction={}",
+                 userFilterDto, pageNo, pageSize, orderBy, direction);
+
+        var filteredUsers = userService.searchUsers(userFilterDto, pageNo, pageSize, direction, orderBy);
+        var response = new UsersDto();
+        response.setContent(filteredUsers.getContent());
+        response.setTotalElements(filteredUsers.getTotalElements());
+        response.setTotalPages(filteredUsers.getTotalPages());
+
+        return ResponseEntity.ok(response);
+    }
+
 }

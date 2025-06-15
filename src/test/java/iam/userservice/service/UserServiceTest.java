@@ -1,8 +1,8 @@
 package iam.userservice.service;
 
-import iam.userservice.dto.UserDto;
-import iam.userservice.dto.UserMapper;
-import iam.userservice.dto.UserRequestDto;
+import iam.userservice.mapper.UserDto;
+import iam.userservice.mapper.UserMapper;
+import iam.userservice.mapper.UserRequestDto;
 import iam.userservice.entity.User;
 import iam.userservice.events.UserEmailUpdatedEvent;
 import iam.userservice.exception.EventPublishingException;

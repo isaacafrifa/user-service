@@ -32,6 +32,7 @@
         <mapstruct.version>1.6.0.Beta1</mapstruct.version>
         <flyway.version>11.0.1</flyway.version>
         <loki.version>1.5.1</loki.version>
+        <cucumber.version>7.15.0</cucumber.version>
         <maven.build.timestamp.format>yyyyMMdd-HHmm</maven.build.timestamp.format>
         <docker.image.name>isaacafrifa/bm-${project.artifactId}</docker.image.name>
         <docker.image.tag>${project.version}-${maven.build.timestamp}</docker.image.tag>
@@ -54,6 +55,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- WebTestClient for testing -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -173,6 +181,25 @@
             <artifactId>spring-rabbit-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Cucumber dependencies -->
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-java</artifactId>
+            <version>${cucumber.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-spring</artifactId>
+            <version>${cucumber.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-junit</artifactId>
+            <version>${cucumber.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -216,7 +243,7 @@
                         <configuration>
                             <generatorName>spring</generatorName>
                             <inputSpec>${project.basedir}/src/main/resources/openapi/api.yml</inputSpec>
-                            <modelPackage>iam.userservice.dto</modelPackage>
+                            <modelPackage>iam.userservice.mapper</modelPackage>
                             <apiPackage>iam.userservice.controller</apiPackage>
                             <configOptions>
                                 <title>Users API</title>
