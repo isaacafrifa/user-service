@@ -73,3 +73,9 @@ Feature: User Search
       | lastNames    | ["Smith", "Johnson"] | 3     | 2, 3 and 4 |
       | emails       | ["john", "alice"]    | 3     | 1, 3 and 4 |
       | phoneNumbers | ["1234", "5566"]     | 2     | 1 and 4    |
+
+  Scenario: Search users without filters
+    When the endpoint "/users/search" to get users is hit with no filters
+    Then the response status code should be 200
+    And the response should contain 4 users
+    And the response should include all users
