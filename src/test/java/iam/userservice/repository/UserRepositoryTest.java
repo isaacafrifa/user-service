@@ -1,6 +1,7 @@
 package iam.userservice.repository;
 
 import iam.userservice.PostgresConfiguration;
+import iam.userservice.TestUserServiceApplication;
 import iam.userservice.entity.User;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
@@ -11,6 +12,7 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -24,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Import(PostgresConfiguration.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
+@ContextConfiguration(classes = TestUserServiceApplication.class)
 @DisplayName("Running userRepository tests")
 class UserRepositoryTest {
 

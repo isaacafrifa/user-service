@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.anyChar;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -87,11 +88,11 @@ class UserFilterSpecificationTest {
 
         // Verify interactions
         verify(criteriaBuilder).equal(any(), eq(1L));
-        verify(criteriaBuilder).or(any(Predicate[].class));
-        verify(firstNamePath).in(any(List.class));
-        verify(lastNamePath).in(any(List.class));
-        verify(emailPath).in(any(List.class));
-        verify(phoneNumberPath).in(any(List.class));
+        verify(criteriaBuilder, times(5)).or(any(Predicate[].class));
+        verify(firstNamePath).as(String.class);
+        verify(lastNamePath).as(String.class);
+        verify(emailPath).as(String.class);
+        verify(phoneNumberPath).as(String.class);
         verify(criteriaBuilder).and(any(Predicate[].class));
     }
 
