@@ -2,9 +2,9 @@ package iam.userservice.cucumber.steps;
 
 import iam.userservice.mapper.UserDto;
 import iam.userservice.mapper.UsersDto;
-import iam.userservice.util.UserFilterCriteria;
 import iam.userservice.entity.User;
 import iam.userservice.repository.UserRepository;
+import iam.userservice.cucumber.util.JsonFieldParser;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
@@ -13,12 +13,12 @@ import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import io.cucumber.spring.ScenarioScope;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -33,15 +33,28 @@ public class UserSearchSteps {
 
     private final WebTestClient webTestClient;
     private final UserRepository userRepository;
+    private final JsonFieldParser jsonFieldParser;
 
     public UserSearchSteps(WebTestClient webTestClient, UserRepository userRepository) {
         this.webTestClient = webTestClient;
         this.userRepository = userRepository;
+        this.jsonFieldParser = new JsonFieldParser();
     }
 
     private WebTestClient.ResponseSpec response;
     private UsersDto usersResponse;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    // Default pagination parameters
+    private static final int DEFAULT_PAGE_NO = 0;
+    private static final int DEFAULT_PAGE_SIZE = 10;
+    private static final String DEFAULT_ORDER_BY = "id";
+    private static final String DEFAULT_DIRECTION = "asc";
+
+    // List of known header rows
+    private static final List<List<String>> HEADERS = List.of(
+            List.of("filterKey", "filterValue"), // Header 1
+            List.of("key", "value")             // Alternate Header
+    );
 
     @Before
     public void setup() {
@@ -54,6 +67,7 @@ public class UserSearchSteps {
         // Clean up after each scenario
         userRepository.deleteAll();
     }
+
 
     @Given("the following users exist in the system:")
     public void theFollowingUsersExistInTheSystem(DataTable dataTable) {
@@ -83,557 +97,89 @@ public class UserSearchSteps {
     }
 
     @When("the endpoint {string} to get users is hit with filters")
-    public void theEndpointToGetUsersIsHitWithFilters(String endpoint, DataTable dataTable) {
-        List<Map<String, String>> rows = dataTable.asMaps(String.class, String.class);
-        UserFilterCriteria filterDto = new UserFilterCriteria();
+    public void theEndpointToGetUsersIsHitWithFilters(String endpoint, List<List<String>> rows) {
+        // Process rows to field-value pairs
+        List<List<String>> fieldValuePairs = processRowsToFieldValuePairs(rows);
 
-        // Default pagination parameters
-        int pageNo = 0;
-        int pageSize = 10;
-        String orderBy = "id";
-        String direction = "asc";
+        // Convert to a map structure
+        Map<String, Object> filterMap = jsonFieldParser.convertToMap(fieldValuePairs);
 
-        // Process each filter
-        for (Map<String, String> row : rows) {
-            String filterKey = row.get("filterKey");
-            String filterValue = row.get("filterValue");
-
-            switch (filterKey) {
-                case "userIds":
-                    if (filterValue.startsWith("[") && filterValue.endsWith("]")) {
-                        List<Long> values = parseJsonArrayToLong(filterValue);
-                        if (values != null && !values.isEmpty()) {
-                            // Use the parsed list directly
-                            filterDto.setUserIds(values);
-                            filterDto.setExactUserIdsFlag(true);
-                        } else {
-                            try {
-                                // Try to parse a single value
-                                Long userId = Long.parseLong(filterValue.replaceAll("[\\[\\]\"]", ""));
-                                filterDto.setUserIds(Collections.singletonList(userId));
-                                filterDto.setExactUserIdsFlag(true);
-                            } catch (NumberFormatException e) {
-                                System.err.println("Error parsing userId: " + e.getMessage());
-                            }
-                        }
-                    } else {
-                        try {
-                            Long userId = Long.parseLong(filterValue);
-                            filterDto.setUserIds(Collections.singletonList(userId));
-                            filterDto.setExactUserIdsFlag(true);
-                        } catch (NumberFormatException e) {
-                            System.err.println("Error parsing userId: " + e.getMessage());
-                        }
-                    }
-                    break;
-                case "firstNames":
-                    if (filterValue.startsWith("[") && filterValue.endsWith("]")) {
-                        List<String> values = parseJsonArray(filterValue);
-                        if (values != null && !values.isEmpty()) {
-                            // Use the parsed list directly
-                            filterDto.setFirstNames(values);
-                        } else {
-                            filterDto.setFirstNames(Collections.singletonList(filterValue));
-                        }
-                    } else {
-                        filterDto.setFirstNames(Collections.singletonList(filterValue));
-                    }
-                    break;
-                case "lastNames":
-                    if (filterValue.startsWith("[") && filterValue.endsWith("]")) {
-                        List<String> values = parseJsonArray(filterValue);
-                        if (values != null && !values.isEmpty()) {
-                            // Use the parsed list directly
-                            filterDto.setLastNames(values);
-                        } else {
-                            filterDto.setLastNames(Collections.singletonList(filterValue));
-                        }
-                    } else {
-                        filterDto.setLastNames(Collections.singletonList(filterValue));
-                    }
-                    break;
-                case "emails":
-                    if (filterValue.startsWith("[") && filterValue.endsWith("]")) {
-                        List<String> values = parseJsonArray(filterValue);
-                        if (values != null && !values.isEmpty()) {
-                            // Use the parsed list directly
-                            filterDto.setEmails(values);
-                        } else {
-                            filterDto.setEmails(Collections.singletonList(filterValue));
-                        }
-                    } else {
-                        filterDto.setEmails(Collections.singletonList(filterValue));
-                    }
-                    break;
-                case "phoneNumbers":
-                    if (filterValue.startsWith("[") && filterValue.endsWith("]")) {
-                        List<String> values = parseJsonArray(filterValue);
-                        if (values != null && !values.isEmpty()) {
-                            // Use the parsed list directly
-                            filterDto.setPhoneNumbers(values);
-                        } else {
-                            filterDto.setPhoneNumbers(Collections.singletonList(filterValue));
-                        }
-                    } else {
-                        filterDto.setPhoneNumbers(Collections.singletonList(filterValue));
-                    }
-                    break;
-                default:
-                    // Ignore other keys for now
-                    break;
-            }
-        }
-
-        // Create final copies of the variables for use in the lambda
-        final int finalPageNo = pageNo;
-        final int finalPageSize = pageSize;
-        final String finalOrderBy = orderBy;
-        final String finalDirection = direction;
-
-        response = webTestClient.post()
-            .uri(uriBuilder -> uriBuilder
-                .path("/api/v1" + endpoint)
-                .queryParam("pageNo", finalPageNo)
-                .queryParam("pageSize", finalPageSize)
-                .queryParam("orderBy", finalOrderBy)
-                .queryParam("direction", finalDirection)
-                .build())
-            .bodyValue(filterDto)
-            .exchange();
-
-        usersResponse = response.expectStatus().isOk()
-            .expectBody(UsersDto.class)
-            .returnResult()
-            .getResponseBody();
+        // Make API request with default pagination parameters
+        makeApiRequest(endpoint, filterMap, DEFAULT_PAGE_NO, DEFAULT_PAGE_SIZE, DEFAULT_ORDER_BY, DEFAULT_DIRECTION);
     }
 
     @When("the endpoint {string} to get users is hit with filters and pagination")
-    public void theEndpointToGetUsersIsHitWithFiltersAndPagination(String endpoint, DataTable dataTable) {
-        List<Map<String, String>> rows = dataTable.asMaps(String.class, String.class);
-        UserFilterCriteria filterDto = new UserFilterCriteria();
+    public void theEndpointToGetUsersIsHitWithFiltersAndPagination(String endpoint, List<List<String>> rows) {
+        // Process rows to field-value pairs
+        List<List<String>> fieldValuePairs = processRowsToFieldValuePairs(rows);
 
-        // Default pagination parameters
-        int pageNo = 0;
-        int pageSize = 10;
-        String orderBy = "id";
-        String direction = "asc";
+        // Extract pagination parameters
+        Object[] params = extractPaginationParams(fieldValuePairs);
+        List<List<String>> filteredPairs = (List<List<String>>) params[0];
+        int pageNo = (int) params[1];
+        int pageSize = (int) params[2];
+        String orderBy = (String) params[3];
+        String direction = (String) params[4];
 
-        // Process each filter
-        for (Map<String, String> row : rows) {
-            String filterKey = row.get("filterKey");
-            String filterValue = row.get("filterValue");
+        // Convert to a map structure
+        Map<String, Object> filterMap = jsonFieldParser.convertToMap(filteredPairs);
 
-            switch (filterKey) {
-                case "userIds":
-                    try {
-                        if (filterValue.startsWith("[") && filterValue.endsWith("]")) {
-                            List<Long> values = parseJsonArrayToLong(filterValue);
-                            if (values != null && !values.isEmpty()) {
-                                filterDto.setUserIds(values);
-                                filterDto.setExactUserIdsFlag(true);
-                            } else {
-                                Long userId = Long.parseLong(filterValue.replaceAll("[\\[\\]\"]", ""));
-                                filterDto.setUserIds(Collections.singletonList(userId));
-                                filterDto.setExactUserIdsFlag(true);
-                            }
-                        } else {
-                            Long userId = Long.parseLong(filterValue);
-                            filterDto.setUserIds(Collections.singletonList(userId));
-                            filterDto.setExactUserIdsFlag(true);
-                        }
-                    } catch (NumberFormatException e) {
-                        System.err.println("Error parsing userId: " + e.getMessage());
-                    }
-                    break;
-                case "firstNames":
-                    filterDto.setFirstNames(Collections.singletonList(filterValue));
-                    break;
-                case "lastNames":
-                    filterDto.setLastNames(Collections.singletonList(filterValue));
-                    break;
-                case "emails":
-                    filterDto.setEmails(Collections.singletonList(filterValue));
-                    break;
-                case "phoneNumbers":
-                    filterDto.setPhoneNumbers(Collections.singletonList(filterValue));
-                    break;
-                case "pageNo":
-                    pageNo = Integer.parseInt(filterValue);
-                    break;
-                case "pageSize":
-                    pageSize = Integer.parseInt(filterValue);
-                    break;
-                case "orderBy":
-                    orderBy = filterValue;
-                    break;
-                case "direction":
-                    direction = filterValue;
-                    break;
-                default:
-                    throw new IllegalArgumentException("Unsupported filter key: " + filterKey);
-            }
-        }
-
-        // Create final copies of the variables for use in the lambda
-        final int finalPageNo = pageNo;
-        final int finalPageSize = pageSize;
-        final String finalOrderBy = orderBy;
-        final String finalDirection = direction;
-
-        response = webTestClient.post()
-            .uri(uriBuilder -> uriBuilder
-                .path("/api/v1" + endpoint)
-                .queryParam("pageNo", finalPageNo)
-                .queryParam("pageSize", finalPageSize)
-                .queryParam("orderBy", finalOrderBy)
-                .queryParam("direction", finalDirection)
-                .build())
-            .bodyValue(filterDto)
-            .exchange();
-
-        usersResponse = response.expectStatus().isOk()
-            .expectBody(UsersDto.class)
-            .returnResult()
-            .getResponseBody();
+        // Make API request with extracted pagination parameters
+        makeApiRequest(endpoint, filterMap, pageNo, pageSize, orderBy, direction);
     }
 
     @When("the endpoint {string} with pagination params to get users is hit with filters")
-    public void theEndpointWithPaginationToGetUsersIsHitWithFilters(String endpointWithParams, DataTable dataTable) {
+    public void theEndpointWithPaginationToGetUsersIsHitWithFilters(String endpointWithParams, List<List<String>> rows) {
         // Extract the base endpoint and query parameters
         String[] parts = endpointWithParams.split("\\?", 2);
         String endpoint = parts[0];
         String queryParams = parts.length > 1 ? parts[1] : "";
 
         // Parse query parameters
-        int pageNo = 0;
-        int pageSize = 10;
-        String orderBy = "id";
-        String direction = "asc";
+        Object[] params = parseQueryParams(queryParams);
+        int pageNo = (int) params[0];
+        int pageSize = (int) params[1];
+        String orderBy = (String) params[2];
+        String direction = (String) params[3];
 
-        if (!queryParams.isEmpty()) {
-            String[] params = queryParams.split("&");
-            for (String param : params) {
-                String[] keyValue = param.split("=", 2);
-                if (keyValue.length == 2) {
-                    String key = keyValue[0];
-                    String value = keyValue[1];
+        // Process rows to field-value pairs
+        List<List<String>> fieldValuePairs = processRowsToFieldValuePairs(rows);
 
-                    switch (key) {
-                        case "pageNo":
-                            pageNo = Integer.parseInt(value);
-                            break;
-                        case "pageSize":
-                            pageSize = Integer.parseInt(value);
-                            break;
-                        case "orderBy":
-                            orderBy = value;
-                            break;
-                        case "direction":
-                            direction = value;
-                            break;
-                        default:
-                            throw new IllegalStateException("Unexpected value: " + key);
-                    }
-                }
-            }
-        }
+        // Convert to a map structure
+        Map<String, Object> filterMap = jsonFieldParser.convertToMap(fieldValuePairs);
 
-        List<Map<String, String>> rows = dataTable.asMaps(String.class, String.class);
-        UserFilterCriteria filterDto = new UserFilterCriteria();
-
-        // Process each filter
-        for (Map<String, String> row : rows) {
-            String filterKey = row.get("filterKey");
-            String filterValue = row.get("filterValue");
-
-            switch (filterKey) {
-                case "userIds":
-                    if (filterValue.startsWith("[") && filterValue.endsWith("]")) {
-                        List<Long> values = parseJsonArrayToLong(filterValue);
-                        if (values != null && !values.isEmpty()) {
-                            // Use the parsed list directly
-                            filterDto.setUserIds(values);
-                            filterDto.setExactUserIdsFlag(true);
-                        } else {
-                            try {
-                                // Try to parse a single value
-                                Long userId = Long.parseLong(filterValue.replaceAll("[\\[\\]\"]", ""));
-                                filterDto.setUserIds(Collections.singletonList(userId));
-                                filterDto.setExactUserIdsFlag(true);
-                            } catch (NumberFormatException e) {
-                                System.err.println("Error parsing userId: " + e.getMessage());
-                            }
-                        }
-                    } else {
-                        try {
-                            Long userId = Long.parseLong(filterValue);
-                            filterDto.setUserIds(Collections.singletonList(userId));
-                            filterDto.setExactUserIdsFlag(true);
-                        } catch (NumberFormatException e) {
-                            System.err.println("Error parsing userId: " + e.getMessage());
-                        }
-                    }
-                    break;
-                case "firstNames":
-                    if (filterValue.startsWith("[") && filterValue.endsWith("]")) {
-                        List<String> values = parseJsonArray(filterValue);
-                        if (values != null && !values.isEmpty()) {
-                            filterDto.setFirstNames(values);
-                        } else {
-                            filterDto.setFirstNames(Collections.singletonList(filterValue));
-                        }
-                    } else {
-                        filterDto.setFirstNames(Collections.singletonList(filterValue));
-                    }
-                    break;
-                case "lastNames":
-                    if (filterValue.startsWith("[") && filterValue.endsWith("]")) {
-                        List<String> values = parseJsonArray(filterValue);
-                        if (values != null && !values.isEmpty()) {
-                            filterDto.setLastNames(values);
-                        } else {
-                            filterDto.setLastNames(Collections.singletonList(filterValue));
-                        }
-                    } else {
-                        filterDto.setLastNames(Collections.singletonList(filterValue));
-                    }
-                    break;
-                case "emails":
-                    if (filterValue.startsWith("[") && filterValue.endsWith("]")) {
-                        List<String> values = parseJsonArray(filterValue);
-                        if (values != null && !values.isEmpty()) {
-                            filterDto.setEmails(values);
-                        } else {
-                            filterDto.setEmails(Collections.singletonList(filterValue));
-                        }
-                    } else {
-                        filterDto.setEmails(Collections.singletonList(filterValue));
-                    }
-                    break;
-                case "phoneNumbers":
-                    if (filterValue.startsWith("[") && filterValue.endsWith("]")) {
-                        List<String> values = parseJsonArray(filterValue);
-                        if (values != null && !values.isEmpty()) {
-                            filterDto.setPhoneNumbers(values);
-                        } else {
-                            filterDto.setPhoneNumbers(Collections.singletonList(filterValue));
-                        }
-                    } else {
-                        filterDto.setPhoneNumbers(Collections.singletonList(filterValue));
-                    }
-                    break;
-                default:
-                    // Ignore other keys for now
-                    break;
-            }
-        }
-
-        // Create final copies of the variables for use in the lambda
-        final int finalPageNo = pageNo;
-        final int finalPageSize = pageSize;
-        final String finalOrderBy = orderBy;
-        final String finalDirection = direction;
-
-        response = webTestClient.post()
-            .uri(uriBuilder -> uriBuilder
-                .path("/api/v1" + endpoint)
-                .queryParam("pageNo", finalPageNo)
-                .queryParam("pageSize", finalPageSize)
-                .queryParam("orderBy", finalOrderBy)
-                .queryParam("direction", finalDirection)
-                .build())
-            .bodyValue(filterDto)
-            .exchange();
-
-        usersResponse = response.expectStatus().isOk()
-            .expectBody(UsersDto.class)
-            .returnResult()
-            .getResponseBody();
+        // Make API request with extracted pagination parameters
+        makeApiRequest(endpoint, filterMap, pageNo, pageSize, orderBy, direction);
     }
 
 
     @When("the endpoint {string} to get users is hit with no filters")
     public void theEndpointToGetUsersIsHitWithNoFilters(String endpoint) {
-        // Create empty filter criteria
-        UserFilterCriteria filterDto = new UserFilterCriteria();
+        // Create empty filter map
+        Map<String, Object> filterMap = new HashMap<>();
 
-        // Default pagination parameters
-        int pageNo = 0;
-        int pageSize = 10;
-        String orderBy = "id";
-        String direction = "asc";
-
-        // Create final copies of the variables for use in the lambda
-        final int finalPageNo = pageNo;
-        final int finalPageSize = pageSize;
-        final String finalOrderBy = orderBy;
-        final String finalDirection = direction;
-
-        response = webTestClient.post()
-            .uri(uriBuilder -> uriBuilder
-                .path("/api/v1" + endpoint)
-                .queryParam("pageNo", finalPageNo)
-                .queryParam("pageSize", finalPageSize)
-                .queryParam("orderBy", finalOrderBy)
-                .queryParam("direction", finalDirection)
-                .build())
-            .bodyValue(filterDto)
-            .exchange();
-
-        usersResponse = response.expectStatus().isOk()
-            .expectBody(UsersDto.class)
-            .returnResult()
-            .getResponseBody();
+        // Make API request with default pagination parameters
+        makeApiRequest(endpoint, filterMap, DEFAULT_PAGE_NO, DEFAULT_PAGE_SIZE, DEFAULT_ORDER_BY, DEFAULT_DIRECTION);
     }
 
     @When("the endpoint {string} to get users is hit with filters and sorting")
-    public void theEndpointToGetUsersIsHitWithFiltersAndSorting(String endpoint, DataTable dataTable) {
-        List<Map<String, String>> rows = dataTable.asMaps(String.class, String.class);
-        UserFilterCriteria filterDto = new UserFilterCriteria();
+    public void theEndpointToGetUsersIsHitWithFiltersAndSorting(String endpoint, List<List<String>> rows) {
+        // Process rows to field-value pairs
+        List<List<String>> fieldValuePairs = processRowsToFieldValuePairs(rows);
 
-        // Default pagination parameters
-        int pageNo = 0;
-        int pageSize = 10;
-        String orderBy = "id";
-        String direction = "asc";
+        // Extract pagination parameters (in this case, just sorting parameters)
+        Object[] params = extractPaginationParams(fieldValuePairs);
+        List<List<String>> filteredPairs = (List<List<String>>) params[0];
+        int pageNo = (int) params[1];
+        int pageSize = (int) params[2];
+        String orderBy = (String) params[3];
+        String direction = (String) params[4];
 
-        // Process each filter
-        for (Map<String, String> row : rows) {
-            String filterKey = row.get("filterKey");
-            String filterValue = row.get("filterValue");
+        // Convert to a map structure
+        Map<String, Object> filterMap = jsonFieldParser.convertToMap(filteredPairs);
 
-            switch (filterKey) {
-                case "userIds":
-                    try {
-                        if (filterValue.startsWith("[") && filterValue.endsWith("]")) {
-                            List<Long> values = parseJsonArrayToLong(filterValue);
-                            if (values != null && !values.isEmpty()) {
-                                filterDto.setUserIds(values);
-                                filterDto.setExactUserIdsFlag(true);
-                            } else {
-                                Long userId = Long.parseLong(filterValue.replaceAll("[\\[\\]\"]", ""));
-                                filterDto.setUserIds(Collections.singletonList(userId));
-                                filterDto.setExactUserIdsFlag(true);
-                            }
-                        } else {
-                            Long userId = Long.parseLong(filterValue);
-                            filterDto.setUserIds(Collections.singletonList(userId));
-                            filterDto.setExactUserIdsFlag(true);
-                        }
-                    } catch (NumberFormatException e) {
-                        System.err.println("Error parsing userId: " + e.getMessage());
-                    }
-                    break;
-                case "firstNames":
-                    filterDto.setFirstNames(Collections.singletonList(filterValue));
-                    break;
-                case "lastNames":
-                    filterDto.setLastNames(Collections.singletonList(filterValue));
-                    break;
-                case "emails":
-                    filterDto.setEmails(Collections.singletonList(filterValue));
-                    break;
-                case "phoneNumbers":
-                    filterDto.setPhoneNumbers(Collections.singletonList(filterValue));
-                    break;
-                case "orderBy":
-                    orderBy = filterValue;
-                    break;
-                case "direction":
-                    direction = filterValue;
-                    break;
-                default:
-                    throw new IllegalArgumentException("Unsupported filter key: " + filterKey);
-            }
-        }
-
-        // Create final copies of the variables for use in the lambda
-        final int finalPageNo = pageNo;
-        final int finalPageSize = pageSize;
-        final String finalOrderBy = orderBy;
-        final String finalDirection = direction;
-
-        response = webTestClient.post()
-            .uri(uriBuilder -> uriBuilder
-                .path("/api/v1" + endpoint)
-                .queryParam("pageNo", finalPageNo)
-                .queryParam("pageSize", finalPageSize)
-                .queryParam("orderBy", finalOrderBy)
-                .queryParam("direction", finalDirection)
-                .build())
-            .bodyValue(filterDto)
-            .exchange();
-
-        usersResponse = response.expectStatus().isOk()
-            .expectBody(UsersDto.class)
-            .returnResult()
-            .getResponseBody();
-    }
-
-    @When("I search for users with first name {string} and last name {string}")
-    public void iSearchForUsersWithFirstNameAndLastName(String firstName, String lastName) {
-        UserFilterCriteria filterDto = new UserFilterCriteria();
-        filterDto.setFirstNames(Collections.singletonList(firstName));
-        filterDto.setLastNames(Collections.singletonList(lastName));
-
-        response = webTestClient.post()
-            .uri(uriBuilder -> uriBuilder
-                .path("/api/v1/users/search")
-                .queryParam("pageNo", 0)
-                .queryParam("pageSize", 10)
-                .queryParam("orderBy", "id")
-                .queryParam("direction", "asc")
-                .build())
-            .bodyValue(filterDto)
-            .exchange();
-
-        usersResponse = response.expectStatus().isOk()
-            .expectBody(UsersDto.class)
-            .returnResult()
-            .getResponseBody();
-    }
-
-    @When("I search for users with first name {string} and page size {int} and page number {int}")
-    public void iSearchForUsersWithFirstNameAndPageSizeAndPageNumber(String firstName, int pageSize, int pageNo) {
-        UserFilterCriteria filterDto = new UserFilterCriteria();
-        filterDto.setFirstNames(Collections.singletonList(firstName));
-
-        response = webTestClient.post()
-            .uri(uriBuilder -> uriBuilder
-                .path("/api/v1/users/search")
-                .queryParam("pageNo", pageNo)
-                .queryParam("pageSize", pageSize)
-                .queryParam("orderBy", "id")
-                .queryParam("direction", "asc")
-                .build())
-            .bodyValue(filterDto)
-            .exchange();
-
-        usersResponse = response.expectStatus().isOk()
-            .expectBody(UsersDto.class)
-            .returnResult()
-            .getResponseBody();
-    }
-
-    @When("I search for users with sorting by {string} in {string} order")
-    public void iSearchForUsersWithSortingByInOrder(String sortBy, String direction) {
-        UserFilterCriteria filterDto = new UserFilterCriteria();
-
-        response = webTestClient.post()
-            .uri(uriBuilder -> uriBuilder
-                .path("/api/v1/users/search")
-                .queryParam("pageNo", 0)
-                .queryParam("pageSize", 10)
-                .queryParam("orderBy", sortBy)
-                .queryParam("direction", direction)
-                .build())
-            .bodyValue(filterDto)
-            .exchange();
-
-        usersResponse = response.expectStatus().isOk()
-            .expectBody(UsersDto.class)
-            .returnResult()
-            .getResponseBody();
+        // Make API request with extracted pagination parameters
+        makeApiRequest(endpoint, filterMap, pageNo, pageSize, orderBy, direction);
     }
 
     @Then("the response status code should be {int}")
@@ -641,80 +187,86 @@ public class UserSearchSteps {
         response.expectStatus().isEqualTo(statusCode);
     }
 
+    /**
+     * Verifies that the response contains the expected number of users.
+     * This method handles all variations of the step definition.
+     *
+     * @param count Expected number of users
+     */
     @Then("the response should contain {int} user\\(s)")
-    public void theResponseShouldContainUserS(int count) {
-        assertEquals(count, usersResponse.getContent().size());
-    }
-
     @Then("the response should contain {int} user")
-    public void theResponseShouldContainUser(int count) {
-        assertEquals(count, usersResponse.getContent().size());
-    }
-
     @Then("the response should contain {int} users")
     public void theResponseShouldContainUsers(int count) {
-        assertEquals(count, usersResponse.getContent().size());
+        // Handle case where usersResponse or its content might be null
+        if (usersResponse == null) {
+            assertEquals(0, count, "Expected 0 users for null response");
+            return;
+        }
+
+        List<UserDto> content = usersResponse.getContent();
+        if (content == null) {
+            assertEquals(0, count, "Expected 0 users for null content");
+            return;
+        }
+
+        assertEquals(count, content.size());
+    }
+
+    /**
+     * Helper method to verify that the response includes users with the specified emails.
+     *
+     * @param emails List of emails to check
+     */
+    private void verifyResponseContainsEmails(String... emails) {
+        List<String> userEmails = usersResponse.getContent().stream()
+            .map(UserDto::getEmail)
+            .toList();
+
+        for (String email : emails) {
+            assertTrue(userEmails.contains(email), "Response should contain user with email " + email);
+        }
     }
 
     @Then("the response should include users with emails {string} and {string}")
     public void theResponseShouldIncludeUsersWithEmailsAnd(String email1, String email2) {
-        List<String> userEmails = usersResponse.getContent().stream()
-            .map(UserDto::getEmail)
-            .toList();
-
-        assertTrue(userEmails.contains(email1), "Response should contain user with email " + email1);
-        assertTrue(userEmails.contains(email2), "Response should contain user with email " + email2);
+        verifyResponseContainsEmails(email1, email2);
     }
 
     @Then("the response should include users with emails {string}")
     public void theResponseShouldIncludeUsersWithEmails(String email) {
+        verifyResponseContainsEmails(email);
+    }
+
+    /**
+     * Helper method to verify that the response includes users with the specified IDs.
+     * Maps IDs to emails based on the test data and checks if the emails are in the response.
+     *
+     * @param ids Array of user IDs to check
+     */
+    private void verifyResponseContainsIds(int... ids) {
         List<String> userEmails = usersResponse.getContent().stream()
             .map(UserDto::getEmail)
             .toList();
 
-        assertTrue(userEmails.contains(email), "Response should contain user with email " + email);
+        for (int id : ids) {
+            String email = getEmailForId(id);
+            assertTrue(userEmails.contains(email), "Response should contain user with email " + email);
+        }
     }
 
     @Then("the response should include users with ids {int} and {int}")
     public void theResponseShouldIncludeUsersWithIdsAnd(int id1, int id2) {
-        // Map IDs to emails based on the test data
-        String email1 = getEmailForId(id1);
-        String email2 = getEmailForId(id2);
-
-        List<String> userEmails = usersResponse.getContent().stream()
-            .map(UserDto::getEmail)
-            .toList();
-
-        assertTrue(userEmails.contains(email1), "Response should contain user with email " + email1);
-        assertTrue(userEmails.contains(email2), "Response should contain user with email " + email2);
+        verifyResponseContainsIds(id1, id2);
     }
 
     @Then("the response should include users with ids {int}")
     public void theResponseShouldIncludeUsersWithIds(int id) {
-        // Map ID to email based on the test data
-        String email = getEmailForId(id);
-
-        List<String> userEmails = usersResponse.getContent().stream()
-            .map(UserDto::getEmail)
-            .toList();
-
-        assertTrue(userEmails.contains(email), "Response should contain user with email " + email);
+        verifyResponseContainsIds(id);
     }
 
     @Then("the response should include users with ids {int}, {int} and {int}")
     public void theResponseShouldIncludeUsersWithIdsAndAnd(int id1, int id2, int id3) {
-        // Map IDs to emails based on the test data
-        String email1 = getEmailForId(id1);
-        String email2 = getEmailForId(id2);
-        String email3 = getEmailForId(id3);
-
-        List<String> userEmails = usersResponse.getContent().stream()
-            .map(UserDto::getEmail)
-            .toList();
-
-        assertTrue(userEmails.contains(email1), "Response should contain user with email " + email1);
-        assertTrue(userEmails.contains(email2), "Response should contain user with email " + email2);
-        assertTrue(userEmails.contains(email3), "Response should contain user with email " + email3);
+        verifyResponseContainsIds(id1, id2, id3);
     }
 
     /**
@@ -792,39 +344,162 @@ public class UserSearchSteps {
         }
     }
 
+
     /**
-     * Parse a JSON array string into a List of strings.
-     * 
-     * @param jsonArrayString the JSON array string to parse
-     * @return a List of strings, or null if parsing fails
+     * Helper method to process rows from a DataTable into field-value pairs.
+     * Skips the header row if it matches the expected header content.
+     *
+     * @param rows List of rows from the DataTable
+     * @return List of field-value pairs
      */
-    private List<String> parseJsonArray(String jsonArrayString) {
-        try {
-            if (jsonArrayString.startsWith("[") && jsonArrayString.endsWith("]")) {
-                return Arrays.asList(objectMapper.readValue(jsonArrayString, String[].class));
+    private List<List<String>> processRowsToFieldValuePairs(List<List<String>> rows) {
+        // Process rows excluding any known header rows
+        List<List<String>> fieldValuePairs = new ArrayList<>();
+        for (List<String> row : rows) {
+            // Skip the row if it matches any known header
+            if (HEADERS.contains(row)) {
+                continue;
             }
-        } catch (JsonProcessingException e) {
-            // Log the error or handle it as appropriate
-            System.err.println("Error parsing JSON array: " + e.getMessage());
+            if (row.size() >= 2) {
+                String filterKey = row.get(0);
+                String filterValue = row.get(1);
+                fieldValuePairs.add(Arrays.asList(filterKey, filterValue));
+            }
         }
-        return null;
+
+        return fieldValuePairs;
     }
 
     /**
-     * Parse a JSON array string into a List of Long values.
-     * 
-     * @param jsonArrayString the JSON array string to parse
-     * @return a List of Long values, or null if parsing fails
+     * Helper method to extract pagination parameters from field-value pairs.
+     * Removes pagination parameters from the list and returns them separately.
+     *
+     * @param fieldValuePairs List of field-value pairs
+     * @return Object array containing [updatedFieldValuePairs, pageNo, pageSize, orderBy, direction]
      */
-    private List<Long> parseJsonArrayToLong(String jsonArrayString) {
-        try {
-            if (jsonArrayString.startsWith("[") && jsonArrayString.endsWith("]")) {
-                return Arrays.asList(objectMapper.readValue(jsonArrayString, Long[].class));
+    private Object[] extractPaginationParams(List<List<String>> fieldValuePairs) {
+        List<List<String>> updatedPairs = new ArrayList<>();
+        int pageNo = DEFAULT_PAGE_NO;
+        int pageSize = DEFAULT_PAGE_SIZE;
+        String orderBy = DEFAULT_ORDER_BY;
+        String direction = DEFAULT_DIRECTION;
+
+        for (List<String> pair : fieldValuePairs) {
+            String key = pair.get(0);
+            String value = pair.get(1);
+
+            switch (key) {
+                case "pageNo":
+                    try {
+                        pageNo = Integer.parseInt(value);
+                    } catch (NumberFormatException e) {
+                        System.err.println("Error parsing pageNo: " + value);
+                    }
+                    break;
+                case "pageSize":
+                    try {
+                        pageSize = Integer.parseInt(value);
+                    } catch (NumberFormatException e) {
+                        System.err.println("Error parsing pageSize: " + value);
+                    }
+                    break;
+                case "orderBy":
+                    orderBy = value;
+                    break;
+                case "direction":
+                    direction = value;
+                    break;
+                default:
+                    updatedPairs.add(pair);
+                    break;
             }
-        } catch (JsonProcessingException e) {
-            // Log the error or handle it as appropriate
-            System.err.println("Error parsing JSON array to Long: " + e.getMessage());
         }
-        return null;
+
+        return new Object[] { updatedPairs, pageNo, pageSize, orderBy, direction };
     }
+
+    /**
+     * Helper method to parse query parameters from a URL string.
+     *
+     * @param queryParams Query parameters string
+     * @return Object array containing [pageNo, pageSize, orderBy, direction]
+     */
+    private Object[] parseQueryParams(String queryParams) {
+        int pageNo = DEFAULT_PAGE_NO;
+        int pageSize = DEFAULT_PAGE_SIZE;
+        String orderBy = DEFAULT_ORDER_BY;
+        String direction = DEFAULT_DIRECTION;
+
+        if (!queryParams.isEmpty()) {
+            String[] params = queryParams.split("&");
+            for (String param : params) {
+                String[] keyValue = param.split("=", 2);
+                if (keyValue.length == 2) {
+                    String key = keyValue[0];
+                    String value = keyValue[1];
+
+                    switch (key) {
+                        case "pageNo":
+                            pageNo = Integer.parseInt(value);
+                            break;
+                        case "pageSize":
+                            pageSize = Integer.parseInt(value);
+                            break;
+                        case "orderBy":
+                            orderBy = value;
+                            break;
+                        case "direction":
+                            direction = value;
+                            break;
+                        default:
+                            throw new IllegalStateException("Unexpected value: " + key);
+                    }
+                }
+            }
+        }
+
+        return new Object[] { pageNo, pageSize, orderBy, direction };
+    }
+
+    /**
+     * Helper method to make an API request with the given endpoint, filter map, and pagination parameters.
+     *
+     * @param endpoint API endpoint
+     * @param filterMap Map of filter criteria
+     * @param pageNo Page number
+     * @param pageSize Page size
+     * @param orderBy Order by field
+     * @param direction Sort direction
+     */
+    private void makeApiRequest(String endpoint, Map<String, Object> filterMap, int pageNo, int pageSize, String orderBy, String direction) {
+        // Create final copies of the variables for use in the lambda
+        final int finalPageNo = pageNo;
+        final int finalPageSize = pageSize;
+        final String finalOrderBy = orderBy;
+        final String finalDirection = direction;
+
+        response = webTestClient.post()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/v1" + endpoint)
+                        .queryParam("pageNo", finalPageNo)
+                        .queryParam("pageSize", finalPageSize)
+                        .queryParam("orderBy", finalOrderBy)
+                        .queryParam("direction", finalDirection)
+                        .build())
+                .bodyValue(filterMap)
+                .exchange();
+
+        // Don't assert status code here, it will be checked in the specific step
+        try {
+            usersResponse = response.expectBody(UsersDto.class)
+                    .returnResult()
+                    .getResponseBody();
+        } catch (Exception e) {
+            // For error responses, usersResponse might be null
+            // This is expected for 4xx/5xx responses
+            usersResponse = new UsersDto();
+            usersResponse.setContent(Collections.emptyList());
+        }
+    }
+
 }

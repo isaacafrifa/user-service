@@ -20,6 +20,7 @@ Feature: User Search
     And the response should include users with ids <userIds>
     Examples:
       | filterKey    | filterValue | count | userIds |
+      | userIds      | [3]         | 1     | 3       |
       | firstNames   | ["John"]    | 2     | 1 and 3 |
       | firstNames   | ["A"]       | 2     | 2 and 4 |
       | lastNames    | ["Smith"]   | 2     | 2 and 3 |
@@ -69,6 +70,7 @@ Feature: User Search
     And the response should include users with ids <userIds>
     Examples:
       | filterKey    | filterValue          | count | userIds    |
+      | userIds      | [1, 3]               | 2     | 1 and 3    |
       | firstNames   | ["John", "Jane"]     | 3     | 1, 2 and 3 |
       | lastNames    | ["Smith", "Johnson"] | 3     | 2, 3 and 4 |
       | emails       | ["john", "alice"]    | 3     | 1, 3 and 4 |
@@ -79,3 +81,47 @@ Feature: User Search
     Then the response status code should be 200
     And the response should contain 4 users
     And the response should include all users
+
+  # This scenario tests filter values that should return a 400 Bad Request status
+  Scenario Outline: Search users with invalid filter values
+    When the endpoint "/users/search" to get users is hit with filters
+      | filterKey   | filterValue   |
+      | <filterKey> | <filterValue> |
+    Then the response status code should be 400
+    And the response should contain 0 users
+    Examples:
+      | filterKey    | filterValue |
+      | userIds      | [-1]        |
+      | userIds      | ["xyz"]     |
+      | userIds      | []          |
+      | firstNames   | []          |
+      | phoneNumbers | ["abc"]     |
+      | phoneNumbers | [""]        |
+
+  # This scenario tests filter values that are accepted but return no results
+  Scenario Outline: Search users with filter values that return no results
+    When the endpoint "/users/search" to get users is hit with filters
+      | filterKey   | filterValue   |
+      | <filterKey> | <filterValue> |
+    Then the response status code should be 200
+    And the response should contain 0 users
+    Examples:
+      | filterKey    | filterValue              |
+      | firstNames   | ["123"]                  |
+      | lastNames    | ["123"]                  |
+      | userIds      | [""]                     |
+      | emails       | ["invalid-email"]        |
+      | phoneNumbers | ["12345678901234567890"] |
+
+  # This scenario tests empty string filters that match all users
+  Scenario Outline: Search users with empty string filters that match all users
+    When the endpoint "/users/search" to get users is hit with filters
+      | filterKey   | filterValue   |
+      | <filterKey> | <filterValue> |
+    Then the response status code should be 200
+    And the response should contain 4 users
+    Examples:
+      | filterKey  | filterValue |
+      | firstNames | [""]        |
+      | lastNames  | [""]        |
+      | emails     | [""]        |
