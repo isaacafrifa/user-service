@@ -450,30 +450,42 @@ components:
       properties:
         userIds:
           type: array
+          nullable: true
+          minItems: 1
           items:
             type: integer
             format: int64
+            minimum: 1
             description: User ID
         firstNames:
           type: array
+          nullable: true
+          minItems: 1
           items:
             type: string
             description: List of first names to match (partial match, case-insensitive, OR condition)
         lastNames:
          type: array
+         nullable: true
+         minItems: 1
          items:
            type: string
            description: List of last names to match (partial match, case-insensitive, OR condition)
         emails:
           type: array
+          nullable: true
+          minItems: 1
           items:
             type: string
             description: List of emails to match (partial match, case-insensitive, OR condition)
         phoneNumbers:
           type: array
+          nullable: true
+          minItems: 1
           items:
             type: string
-            description: List of phone numbers to match (partial match, case-insensitive, OR condition)
+            pattern: ^\d+$
+            description: List of phone numbers(digits only) to match (partial match, case-insensitive, OR condition)
 
   securitySchemes:
     bearerAuth:
