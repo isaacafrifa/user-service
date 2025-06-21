@@ -12,6 +12,7 @@ import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import io.cucumber.spring.ScenarioScope;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import java.time.OffsetDateTime;
@@ -29,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Step definitions for the user search feature.
  */
 @ScenarioScope
+@Slf4j
 public class UserSearchSteps {
 
     private final WebTestClient webTestClient;
@@ -492,15 +494,18 @@ public class UserSearchSteps {
 
         // Don't assert status code here, it will be checked in the specific step
         try {
-            usersResponse = response.expectBody(UsersDto.class)
-                    .returnResult()
-                    .getResponseBody();
+            var result = response
+                    .expectBody(UsersDto.class)
+                    .consumeWith(res -> log.info("Response body: {}", res.getResponseBody())) // Log the response
+                    .returnResult(); // Return the result for further processing
+
+            usersResponse = result.getResponseBody(); // Extract the response body
         } catch (Exception e) {
             // For error responses, usersResponse might be null
             // This is expected for 4xx/5xx responses
             usersResponse = new UsersDto();
             usersResponse.setContent(Collections.emptyList());
         }
-    }
 
+    }
 }
