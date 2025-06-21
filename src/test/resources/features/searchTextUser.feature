@@ -5,12 +5,12 @@ Feature: User Search with Free Text
 
   Background:
     Given the following users exist in the system:
-      | id | firstName | lastName | email                  | phoneNumber |
-      | 1  | John      | Doe      | john.doe@example.com   | 1234567890  |
-      | 2  | Jane      | Smith    | jane.smith@example.com | 0987654321  |
-      | 3  | John      | Smith    | john.smith@example.com | 1122334455  |
-      | 4  | Alice     | Johnson  | alice.j@example.com    | 5566778899  |
-      | 5  | Mark     | Myles Jackson  | k.jack@example.com    | 2206878643  |
+      | id | firstName | lastName      | email                  | phoneNumber |
+      | 1  | John      | Doe           | john.doe@example.com   | 1234567890  |
+      | 2  | Jane      | Smith         | jane.smith@example.com | 0987654321  |
+      | 3  | John      | Smith         | john.smith@example.com | 1122334455  |
+      | 4  | Alice     | Johnson       | alice.j@example.com    | 5566778899  |
+      | 5  | Mark      | Myles Jackson | m.jack@example.com     | 2206878643  |
 
   Scenario Outline: Search users with searchText matching names
     When the endpoint "/users/search" to get users is hit with filters
@@ -20,9 +20,10 @@ Feature: User Search with Free Text
     And the response should contain <count> user(s)
     And the response should include users with ids <userIds>
     Examples:
-      | value | count | userIds    |
-      | john  | 3     | 1, 3 and 4 |
-      | Smith | 2     | 2 and 3    |
+      | value         | count | userIds    |
+      | john          | 3     | 1, 3 and 4 |
+      | Smith         | 2     | 2 and 3    |
+      | myles jackson | 1     | 5          |
 
 
   Scenario Outline: Search users with searchText matching partial text
