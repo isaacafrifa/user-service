@@ -490,7 +490,10 @@ components:
           type: string
           nullable: true
           maxLength: 50
-          description: Free form text to search across user fields (partial match, case-insensitive)
+          pattern: ^[a-zA-Z0-9\s.,!?'"()@\-_:\/#]*$
+          description: >
+            Free form text to search across user fields (partial match, case-insensitive). 
+            Unsafe characters like <, >, {, }, ;, = are not allowed to prevent exploitation.
 
   securitySchemes:
     bearerAuth:

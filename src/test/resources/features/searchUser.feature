@@ -70,7 +70,7 @@ Feature: User Search
     And the response should include users with ids <userIds>
     Examples:
       | filterKey    | filterValue          | count | userIds    |
-      | userIds      | [1, 3]               | 2     | 1 and 3    |
+      | userIds      | [3, 4]               | 2     | 3 and 4    |
       | firstNames   | ["John", "Jane"]     | 3     | 1, 2 and 3 |
       | lastNames    | ["Smith", "Johnson"] | 3     | 2, 3 and 4 |
       | emails       | ["john", "alice"]    | 3     | 1, 3 and 4 |
