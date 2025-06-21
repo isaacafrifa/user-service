@@ -14,16 +14,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
+import static iam.userservice.config.AppConstants.EMAIL_FIELD;
+import static iam.userservice.config.AppConstants.FIRST_NAME_FIELD;
+import static iam.userservice.config.AppConstants.LAST_NAME_FIELD;
+import static iam.userservice.config.AppConstants.PHONE_NUMBER_FIELD;
+
 /**
  * Specification class for User entity to support dynamic filtering.
  */
 @RequiredArgsConstructor
 public class UserFilterSpecification implements Specification<User>, Predicates {
-
-    private static final String FIRST_NAME_FIELD = "firstName";
-    private static final String LAST_NAME_FIELD = "lastName";
-    private static final String EMAIL_FIELD = "email";
-    private static final String PHONE_NUMBER_FIELD = "phoneNumber";
 
     private final UserFilterCriteria criteria;
 

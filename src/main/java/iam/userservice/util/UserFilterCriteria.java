@@ -17,7 +17,8 @@ public class UserFilterCriteria implements Serializable {
     private List<String> lastNames;
     private List<String> emails;
     private List<String> phoneNumbers;
-//    private String searchField;
     private boolean isExactUserIdsFlag= false;
+    // New field for free-text search
+    private String searchText;
 
 }
