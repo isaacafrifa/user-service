@@ -281,6 +281,7 @@ public class UserSearchSteps {
             case 2 -> "jane.smith@example.com";
             case 3 -> "john.smith@example.com";
             case 4 -> "alice.j@example.com";
+            case 5 -> "m.jack@example.com";
             default -> throw new IllegalArgumentException("Unknown ID: " + id);
         };
     }

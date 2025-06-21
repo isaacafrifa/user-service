@@ -489,6 +489,7 @@ components:
         searchText:
           type: string
           nullable: true
+          maxLength: 50
           description: Free form text to search across user fields (partial match, case-insensitive)
 
   securitySchemes:
