@@ -4,6 +4,7 @@ import iam.userservice.mapper.UserDto;
 import iam.userservice.mapper.UserMapper;
 import iam.userservice.entity.User;
 import iam.userservice.repository.UserFilterSpecification;
+import iam.userservice.repository.UserSearchTextSpecification;
 import iam.userservice.util.Pagination;
 import iam.userservice.repository.UserRepository;
 import iam.userservice.util.UserFilterCriteria;
@@ -15,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 /**
  * Service to perform searching and filtering of users.
@@ -46,9 +48,7 @@ public class UserSearchService {
      * @param direction the sort direction
      * @param sortBy the field to sort by
      * @return a page of users matching the filter criteria
-     * @deprecated Use {@link #searchUsers(UserFilterCriteria, Pagination)} instead
      */
-    @Deprecated(forRemoval=true)
     public Page<UserDto> searchUsers(UserFilterCriteria userFilterCriteria, int pageNo, int pageSize, String direction, String sortBy) {
         log.info("Search users with criteria: {}, pageNo: {}, pageSize: {}, direction: {}, sortBy: {}",
                 userFilterCriteria, pageNo, pageSize, direction, sortBy);
@@ -86,7 +86,18 @@ public class UserSearchService {
     }
 
     private Specification<User> buildSpecification(UserFilterCriteria userFilterCriteria) {
-        return new UserFilterSpecification(userFilterCriteria);
-        // return new UserSearchFieldSpecification(userFilterCriteria);
+//        return new UserFilterSpecification(userFilterCriteria);
+//         return new UserSearchFieldSpecification(userFilterCriteria);
+
+        Specification<User> filterSpec = new UserFilterSpecification(userFilterCriteria);
+
+        // If searchText is provided, combine filter specification with text search specification
+        if (userFilterCriteria != null && StringUtils.hasText(userFilterCriteria.getSearchText())) {
+            Specification<User> textSearchSpec = new UserSearchTextSpecification(userFilterCriteria);
+            // Combine both specifications with AND (user must match both filter criteria and text search)
+            return filterSpec.and(textSearchSpec);
+        }
+
+        return filterSpec;
     }
 }

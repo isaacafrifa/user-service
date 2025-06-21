@@ -53,7 +53,7 @@ public class UserSearchSteps {
     // List of known header rows
     private static final List<List<String>> HEADERS = List.of(
             List.of("filterKey", "filterValue"), // Header 1
-            List.of("key", "value")             // Alternate Header
+            List.of("field", "value")             // Alternate Header
     );
 
     @Before

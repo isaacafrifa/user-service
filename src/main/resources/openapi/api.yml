@@ -486,6 +486,10 @@ components:
             type: string
             pattern: ^\d+$
             description: List of phone numbers(digits only) to match (partial match, case-insensitive, OR condition)
+        searchText:
+          type: string
+          nullable: true
+          description: Free form text to search across user fields (partial match, case-insensitive)
 
   securitySchemes:
     bearerAuth:

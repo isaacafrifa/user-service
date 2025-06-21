@@ -17,6 +17,7 @@ public interface UserFilterMapper {
     @Mapping(source = "lastNames", target = "lastNames")
     @Mapping(source = "emails", target = "emails")
     @Mapping(source = "phoneNumbers", target = "phoneNumbers")
+    @Mapping(source = "searchText", target = "searchText")
     UserFilterCriteria toCriteria(UserFilterDto filterDto, @Context CircularReferenceMappingContext context);
     /**
      * Conveniently using this default method approach so we don't manually create

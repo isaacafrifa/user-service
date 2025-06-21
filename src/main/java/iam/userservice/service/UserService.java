@@ -210,9 +210,10 @@ public class UserService{
      * @param pageSize the page size
      * @param direction the sort direction
      * @param sortBy the field to sort by
+     * @param searchText optional free form text to search across user fields
      * @return a page of users matching the filter criteria
      */
-    public Page<UserDto> searchUsers(UserFilterDto filterDto, int pageNo, int pageSize, String direction, String sortBy) {
+    public Page<UserDto> searchUsers(UserFilterDto filterDto, int pageNo, int pageSize, String direction, String sortBy, String searchText) {
        final Pagination pagination = Pagination.builder()
                 .pageNo(pageNo)
                 .pageSize(pageSize)
@@ -220,7 +221,27 @@ public class UserService{
                 .sortBy(sortBy)
                 .build();
        final UserFilterCriteria userFilterCriteria = userFilterMapper.toCriteria(filterDto);
-        return userSearchService.searchUsers(userFilterCriteria, pagination);
+
+       // Manually set the searchText field if provided
+       if (searchText != null && !searchText.trim().isEmpty()) {
+           userFilterCriteria.setSearchText(searchText);
+       }
+
+       return userSearchService.searchUsers(userFilterCriteria, pagination);
+    }
+
+    /**
+     * Search users based on the provided criteria.
+     * 
+     * @param filterDto the filter criteria
+     * @param pageNo the page number
+     * @param pageSize the page size
+     * @param direction the sort direction
+     * @param sortBy the field to sort by
+     * @return a page of users matching the filter criteria
+     */
+    public Page<UserDto> searchUsers(UserFilterDto filterDto, int pageNo, int pageSize, String direction, String sortBy) {
+        return searchUsers(filterDto, pageNo, pageSize, direction, sortBy, null);
     }
 
 }
